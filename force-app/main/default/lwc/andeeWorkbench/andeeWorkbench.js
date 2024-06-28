@@ -7,6 +7,7 @@ import submitQueryTsv from '@salesforce/apex/AndeeWorkbenchController.SubmitQuer
 import submitQueryBatch from '@salesforce/apex/BatchAndeeWorkbench.SubmitQueryBatch';
 import getBatchJobStatus from '@salesforce/apex/BatchAndeeWorkbench.GetBatchJobStatus';
 import getOrgDomainUrl from '@salesforce/apex/AndeeWorkbenchController.GetOrgDomainUrl';
+import getSingleEntryData from '@salesforce/apex/AndeeWorkbenchController.GetSingleEntryData';
 
 export default class AndeeWorkbench extends LightningElement {    
 
@@ -26,6 +27,10 @@ export default class AndeeWorkbench extends LightningElement {
     @track jobStatus;
     @track contentVersionUrl;
     @track isBatchJobCompleted;;
+    @track isDisplaySingleId;
+    @track selectedSingleRecordId;
+    @track selectedSingleRecordObject;
+    @track rowData = [];
 
     fieldArray = [];
 
@@ -36,6 +41,8 @@ export default class AndeeWorkbench extends LightningElement {
 
     orgDomainUrl = "";
     count = false;
+
+    chainOfSingleRowIds = [];
 
 
     // When component is initialised i.e. Aura's doInit.
@@ -560,6 +567,51 @@ export default class AndeeWorkbench extends LightningElement {
         this.template.querySelector('[data-id="soql_query_textarea"]').value = this.soqlQuery;
 
         this.isLoading = false;
+    }
+
+    displaySingleRow(event){
+        console.log('starting displaySingleRow');
+        this.isLoading = true;
+        this.isDisplaySingleId = true;
+        this.selectedSingleRecordId = event.target.dataset.id;
+        this.chainOfSingleRowIds.push(this.selectedSingleRecordId);
+        
+        this.getSingleEntryData(this.selectedSingleRecordId);
+    }
+
+    displayQueryView(event){
+        console.log('starting displayQueryView');
+
+
+        // remove the last element from the chainOfSingleRowIds array
+        this.chainOfSingleRowIds.pop();
+
+        // If some still on the array then display the last one
+        if(this.chainOfSingleRowIds.length > 0){
+            this.isLoading = true;
+            this.selectedSingleRecordId = this.chainOfSingleRowIds[this.chainOfSingleRowIds.length-1];
+            this.getSingleEntryData(this.selectedSingleRecordId);
+        } else {
+            // Gone back through all the ones displayed so return to query view
+            this.isDisplaySingleId = false;
+        }
+    }
+
+    getSingleEntryData(recordId){
+        getSingleEntryData({selectedId : recordId})
+        .then(data => {
+            this.rowData = [];
+            this.selectedSingleRecordObject = data.ObjectApiName;
+            this.rowData = data.Fields;
+            this.isLoading = false;
+            this.error = undefined;
+        
+        })
+        .catch(error => {
+            this.error = error;
+            console.error('error (displaySingleRow) => ', error); // error handling
+            this.isLoading = false;
+        })
     }
 
 }

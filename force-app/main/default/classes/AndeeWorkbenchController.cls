@@ -281,13 +281,37 @@ public with sharing class AndeeWorkbenchController {
 
         return query;
     }
-    
+
 
     
 
 
     @AuraEnabled
-    public static void SubmitQueryBatch(String objectApiName, list<string> fields, string whereClause, string sortOrder, string limitCount, boolean allRows) {
+    public static QuerySingleRowWrapper  GetSingleEntryData(id selectedId) {
+        
+        map<string, FieldWrapper> objFieldsMap = new map<string, FieldWrapper>();
+        string objectApiName = selectedId.getsobjecttype().getDescribe().getName();
+
+        list<FieldWrapper> objFields =  GetFieldsForObject(objectApiName);
+        for(FieldWrapper objField : objFields){
+            objFieldsMap.put(objField.Name, objField);
+        }
+
+        string query = 'SELECT ' + String.join(objFieldsMap.keyset(), ', ') + ' FROM ' + objectApiName + ' WHERE Id = \'' + selectedId + '\'';
+
+        // Execute the query
+        List<SObject> queryResults = Database.query(query);
+
+        for(string fieldName : objFieldsMap.keyset()){
+            objFieldsMap.get(fieldName).Value = FormatFieldValue(queryResults[0].get(fieldName), objFieldsMap.get(fieldName).Type);
+        }
+
+        QuerySingleRowWrapper wrapper = new QuerySingleRowWrapper();
+        wrapper.ObjectApiName = objectApiName;
+        wrapper.Fields = objFieldsMap.values();
+
+        return wrapper;
+
     }
 
  
@@ -312,6 +336,9 @@ public with sharing class AndeeWorkbenchController {
         
         @AuraEnabled
         public Boolean Linkable;
+        
+        @AuraEnabled
+        public String Value;
     }
     
     public class ResultWrapper {
@@ -324,7 +351,11 @@ public with sharing class AndeeWorkbenchController {
         @AuraEnabled public String Value;
         @AuraEnabled public Boolean Linkable;
     }
-
+    
+    public class QuerySingleRowWrapper {
+        @AuraEnabled public String ObjectApiName;
+        @AuraEnabled public List<FieldWrapper> Fields;
+    }
 
 
 }
