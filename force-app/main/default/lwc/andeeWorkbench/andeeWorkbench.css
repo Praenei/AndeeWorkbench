@@ -1,0 +1,42 @@
+@charset "ISO-8859-1";
+
+
+
+table.description {
+  border-color: #888;
+  border-style: solid;
+  border-width: medium;
+  width: 40em;
+  border-collapse: collapse;
+}
+
+table.description td {
+  margin: 0;
+  padding: 40;
+  border-style: solid;
+  border-color: grey;
+  border-width: thin;
+  width: 50%;
+}
+
+table.dataTable {
+  border-color: #888;
+  border-style: solid;
+  border-width: thin;
+  border-collapse: collapse;
+}
+
+table.dataTable td,
+table.dataTable th {
+  margin: 0;
+  padding: 2;
+  border-color: grey;
+  border-style: solid;
+  border-width: thin;
+  text-align: left;
+  vertical-align: top;
+}
+
+table.dataTable td table.dataTable {
+  width: 100%;
+}

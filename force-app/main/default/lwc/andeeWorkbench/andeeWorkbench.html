@@ -1,0 +1,226 @@
+<template>
+
+    <div data-id="mainDiv" class="slds-card-wrapper">
+
+        
+        <div class="spinner">
+            <template if:true={isLoading}>
+                <lightning-spinner alternative-text="Loading" variant="brand" size="large">
+                </lightning-spinner>
+            </template>
+        </div>
+
+        <br/>
+        <div class="slds-media__body">
+
+            <div class="slds-page-header slds-page-header_joined slds-page-header_bleed slds-shrink-none test-headerRegion slds-is-relative">
+                <div class="slds-media slds-media--center slds-has-flexi-truncate">
+                    <div class="slds-col slds-has-flexi-truncate firstHeaderRow">
+                        <div class="slds-media slds-no-space slds-grow">
+                            <h2 class="slds-card__header-title">
+                                <span class="slds-truncate slds-m-right--xx-small" title="Workbench">
+                                    Workbench 27.6.8
+                                </span>
+                            </h2>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <table border="0" style="width: 100%;">
+                <tbody>
+                    <tr>
+                        <td valign="top" width="1" style="margin-top:2em;">
+                            Object:
+                            <select data-id="objectSelect" id="objectSelect" style="width: 16em" onchange={objectChanged}>
+                                <option value=''>--None--</option>
+                                <template for:each={objectOptions} for:item="oo" for:index="index">
+                                    <option key={oo.index} value={oo.value}>{oo.label}</option>
+                                </template>
+                            </select>
+                        </td>
+                        <td>
+                            <table border="0" align="right" style="width:100%">
+                                <tbody>
+                                    <tr>
+                                        <td valign="top" colspan="2">
+                                            <!--View as:<br>
+                                            <label>
+                                                <input type="radio" data-id="export_action_screen" name="export_action" value="screen" checked >
+                                                List
+                                            </label>&nbsp;
+                                            <label>
+                                                <input type="radio" data-id="export_action_csv" name="export_action" value="csv">
+                                                CSV
+                                            </label>-->&nbsp;
+                                        </td>
+                                        <td valign="top" colspan="2">
+                                            Deleted and archived records:<br>
+                                            <label>
+                                                <input type="radio" name="query_action" value="Query" checked>
+                                                Exclude
+                                            </label>&nbsp;
+                                            <label>
+                                                <input type="radio" name="query_action" data-id="excludeDeleted" value="QueryAll">
+                                                Include
+                                            </label>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td valign="top" width="1" style="margin-top:2em;">
+                            Fields:
+                            <select data-id="fieldSelect" id="fieldSelect" style="width: 16em;" multiple size="5" onchange={fieldChanged}>
+                                <option value='count()'>count()</option>
+                                <template for:each={fieldOptions} for:item="fo" for:index="index">
+                                    <option key={fo.index} value={fo.value}>{fo.label}</option>
+                                </template>
+                            </select>
+                        </td>
+                        <td>
+                            <table id="QB_right_sub_table" border="0" align="right" style="width:100%">
+                                <tbody>
+                                    <tr id="sort_selection_headers">
+                                        <td colspan="2">
+                                            <br>Sort results by:
+                                        </td> 
+                                        <td>
+                                            <br>Max Records:
+                                        </td>
+                                    </tr>
+                                
+                                    <tr id="sort_selection_row">
+                                        <td colspan="2">
+                                            <select data-id="QB_orderby_field" name="QB_orderby_field" style="width: 16em;" onchange={orderChanged}>
+                                                <option value=""></option>                                                
+                                                <template for:each={fieldOptions} for:item="fo" for:index="index">
+                                                    <option key={fo.index} value={fo.value}>{fo.label}</option>
+                                                </template>
+                                            </select>
+                                            <select data-id="QB_orderby_sort" name="QB_orderby_sort" style="width: 6em;" onchange={orderChanged}>
+                                                <option value="ASC">A to Z</option>
+                                                <option value="DESC">Z to A</option>
+                                            </select>
+                                            <select data-id="QB_nulls" name="QB_nulls" style="width: 10em;" onchange={orderChanged}>
+                                                <option value="FIRST" selected="selected">Nulls First</option>
+                                                <option value="LAST">Nulls Last</option>
+                                            </select>
+                                        </td>
+                                        <td>
+                                            <input type="text" data-id="QB_limit_txt" size="10" name="QB_limit_txt" value="200" onkeyup={limitChanged}>
+                                        </td>
+                                    </tr>
+                                    <tr id="filter_row_0"> 
+                                        <td colspan="4" valign="top" nowrap="true">
+                                            <br>Filter results by:<br>
+                                            <select data-id="QB_filter_field_0" name="QB_filter_field_0" style="width: 16em;" onchange={filterChanged}>
+                                                <option value=""></option>                                                
+                                                <template for:each={fieldWhereOptions} for:item="fo" for:index="index">
+                                                    <option key={fo.index} value={fo.value}>{fo.label}</option>
+                                                </template>
+                                            </select>&nbsp;
+                                            <select data-id="QB_filter_compOper_0" name="QB_filter_compOper_0" style="width: 6em;" onchange={filterChanged}>
+                                                <option value="=">=</option>
+                                                <option value="!=">≠</option>
+                                                <option value="<">&lt;</option>
+                                                <option value="<=">≤</option>
+                                                <option value=">">&gt;</option>
+                                                <option value=">=">≥</option>
+                                                <option value="starts">starts with</option>
+                                                <option value="ends">ends with</option>
+                                                <option value="contains">contains</option>
+                                                <option value="IN">in</option>
+                                                <option value="NOT IN">not in</option>
+                                                <option value="INCLUDES">includes</option>
+                                                <option value="EXCLUDES">excludes</option>
+                                            </select>
+                                            &nbsp;
+                                            <input type="text" data-id="QB_filter_value_0" size="27" name="QB_filter_value_0" value="" onkeyup={filterChanged}>
+                                        </td>
+                                        <td id="filter_plus_cell_0" valign="bottom">
+                                            <img id="filter_plus_button" src="static/images/plus_icon.jpg?v=49.0.0" onclick={addFilterRow} style="padding-top: 4px; cursor: pointer;">
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </td>
+                    </tr>
+
+                    <tr>
+                        <td valign="top" colspan="2">
+                            <br>Enter or modify a SOQL query below:
+                            <br>
+                            <textarea data-id="soql_query_textarea" type="text" name="soql_query" rows="5" style="width: 99%; overflow: auto; font-family: monospace, courier;">
+                                {soqlQuery}
+                            </textarea>
+                        </td>
+                    </tr>
+
+                    <tr>
+                        <td colspan="1">
+                            <table>
+                                <tr>
+                                    <td>
+                                        <input type="submit" name="querySubmit" value="Query" onclick={submitQuery}>
+                                    </td>
+                                    <td>
+                                        <input type="submit" name="querySubmit" value="TSV" onclick={submitTsvQuery}>
+                                    </td>
+                                    <td>
+                                        <input type="submit" name="querySubmit" value="Batch TSV" onclick={submitQueryBatch}>
+                                    </td>
+                                </tr>
+                            </table>                            
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+
+        <div style="clear: both;">
+            <br>
+            <template if:true={queryResults}>
+                <h2>Query Results</h2>
+                <table id="query_results" class="dataTable">
+                    <tbody>
+                        <tr>
+                            <template for:each={queryHeadings} for:item="qh" for:index="index">
+                                <th key={qh.index}>{qh}</th>
+                            </template>
+                        </tr>
+                        <template for:each={queryResults} for:item="record">
+                            <tr key={record.RowId}>
+                            <template for:each={record.Fields} for:item="field">
+                                <td key={field.Name}>
+                                    <template if:true={field.Linkable}>
+                                            <a href={field.HRef} target="_blank">{field.Value}</a>
+                                    </template>
+                                    <template if:false={field.Linkable}>
+                                        {field.Value}
+                                    </template>
+                                </td>
+                            </template>
+                            </tr>
+                        </template>
+
+                    </tbody>
+                </table>
+            </template>
+
+            <template if:true={jobStatus}>
+                <p>Status: {jobStatus.Status}</p>
+                <p>Items Processed: {jobStatus.JobItemsProcessed} / {jobStatus.TotalJobItems}</p>
+                
+                <template if:true={isBatchJobCompleted}>
+                    <p><a href={contentVersionUrl} target="_blank">Download</a></p>
+            </template>
+            </template>
+        </div>
+
+    </div>
+    
+</template>

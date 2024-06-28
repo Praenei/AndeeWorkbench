@@ -1,0 +1,330 @@
+public with sharing class AndeeWorkbenchController {
+
+    private static map<string, string> fieldTypeMap = new map<string, string>();
+
+
+    @AuraEnabled(cacheable=true)
+    public static string GetOrgDomainUrl(){
+        return System.Url.getOrgDomainUrl().toExternalForm();
+    }
+    
+    @AuraEnabled(cacheable=true)
+    public static list<string> GetAllObjects() {
+
+        list<string> allObjects = new list<string>();
+        List < Schema.SObjectType > gd = Schema.getGlobalDescribe().Values(); 
+        Map<String , Schema.SObjectType > globalDescription = Schema.getGlobalDescribe();   
+
+        for ( Schema.SObjectType f : gd ) { 
+            allObjects.add(f.getDescribe().getName()); 
+        }
+        allObjects.sort();
+        return allObjects;
+
+    }
+
+
+    @AuraEnabled
+    public static list<FieldWrapper>  GetFieldsForObject(string objectName) {
+
+        list<FieldWrapper> returnFields = new list<FieldWrapper>();
+        map<string, FieldWrapper> fieldsMap = new map<string, FieldWrapper>();
+        
+        Map<String , Schema.SObjectType > globalDescription = Schema.getGlobalDescribe();
+        Schema.sObjectType objType = globalDescription.get(objectName );
+        Schema.DescribeSObjectResult r1 = objType.getDescribe();
+        Map<String , Schema.SObjectField > mapFieldList = r1.fields.getMap();    
+
+        list<string> fieldNames = new list<string>();
+        for ( Schema.SObjectField field : mapFieldList.values() ) {    
+
+            Schema.DescribeFieldResult fieldResult = field.getDescribe();
+            if ( fieldResult.isAccessible() ) {  
+                FieldWrapper fw = new FieldWrapper();
+                fw.Name = fieldResult.getName();
+                fw.Type = fieldResult.getType().name();
+                fw.Filterable = fieldResult.isFilterable();
+                fw.Groupable = fieldResult.isGroupable();
+                fw.Updatable = fieldResult.isUpdateable();
+                fw.Linkable = (fw.Type=='Id' || fw.Type=='REFERENCE')?true:false;
+                fieldsMap.put(fw.Name, fw);
+                fieldNames.add(fieldResult.getName()); 
+            } 
+
+        } 
+
+        fieldNames.sort();
+
+        // Add standard fields to top of returned list
+        set<String> standardFields = new set<String>{'Id', 'Name', 'CreatedDate', 'CreatedById', 'LastModifiedDate', 'LastModifiedById'};
+        for(string standardField : standardFields){
+            if(fieldNames.contains(standardField)){
+                returnFields.add(fieldsMap.get(standardField));
+            }
+        }
+        
+        for(string fieldName : fieldNames){
+            // Add non-standard fields to bottom of returned list
+            if(!standardFields.contains(fieldName)){
+                returnFields.add(fieldsMap.get(fieldName));
+            }
+
+        }
+
+
+        return returnFields;
+    }
+    
+
+
+    @AuraEnabled
+    public static List<ResultWrapper> SubmitQuery(String objectApiName, list<string> fields, string whereClause, string sortOrder, string limitCount, boolean allRows) {
+
+        List<ResultWrapper> results = new List<ResultWrapper>();
+
+        boolean idAutoAdded = false;
+
+        if(!fields.contains('Id')){
+            fields.add('Id');
+            idAutoAdded = true;
+        }
+
+        string query = constructQuery(objectApiName, fields, whereClause, sortOrder, limitCount, allRows);
+        
+        // Execute the query
+        List<SObject> queryResults = Database.query(query);
+
+        // Iterate through the results
+        for (SObject obj : queryResults) {
+            ResultWrapper wrapper = new ResultWrapper();
+            wrapper.RowId = (String)obj.get('Id');
+            wrapper.Fields = new List<FieldData>();
+
+            for (String field : fields) {
+                FieldData fieldData = new FieldData();
+                fieldData.Name = field;
+                string fieldType = null;
+
+                if (field.contains('.')) {
+                    // Handle related object fields
+                    List<String> relationshipParts = field.split('\\.');
+                    SObject relatedObj = obj;
+                    Object fieldValue = null;
+
+                    for (Integer i = 0; i < relationshipParts.size(); i++) {
+                        if (relatedObj == null) break;
+
+                        if (i == relationshipParts.size() - 1) {
+                            fieldValue = relatedObj.get(relationshipParts[i]);
+                            fieldType = GetFieldType(relationshipParts[i-1], relationshipParts[i]);
+                        } else {
+                            relatedObj = relatedObj.getSObject(relationshipParts[i]);
+                        }
+                    }
+
+                    fieldData.Value = FormatFieldValue(fieldValue, fieldType);
+                } else {
+                    // Handle fields on the main object
+                    fieldType = GetFieldType(objectApiName, field);
+                    fieldData.Value = FormatFieldValue(obj.get(field), fieldType);
+                    
+                }
+                if(field != 'Id' || (field == 'Id' &&  !idAutoAdded)){
+                    wrapper.Fields.add(fieldData);
+                }
+            }
+
+            results.add(wrapper);
+        }
+
+        return results;
+    }
+
+    private static String getFieldType(string objectName, String fieldName){
+        if(fieldTypeMap.containsKey(objectName + '.' + fieldName)){
+            return fieldTypeMap.get(objectName + '.' + fieldName);
+        } else {
+            Schema.SObjectType targetType = Schema.getGlobalDescribe().get(objectName);
+            Schema.DescribeSObjectResult targetDesc = targetType.getDescribe();
+            Map<String, Schema.SObjectField> fieldMap = targetDesc.fields.getMap();
+            Schema.SObjectField field = fieldMap.get(fieldName);
+            Schema.DescribeFieldResult fieldDesc = field.getDescribe();
+            fieldTypeMap.put(objectName + '.' + fieldName, fieldDesc.getType().name());
+            return fieldDesc.getType().name();
+        }
+    }
+
+    private static string FormatFieldValue(Object fieldValue, string fieldType){
+        if(fieldValue == null){
+            return '';
+        }
+
+        if(fieldType == 'BOOLEAN'){
+            return (Boolean)fieldValue ? 'true' : 'false';
+        } else if(fieldType == 'DATE'){
+            // format date as yyyy-MM-dd
+            return ((Date)fieldValue).year() + '-' + (((Date)fieldValue).month()<=9?'0':'')+((Date)fieldValue).month() + '-' + (((Date)fieldValue).day()<=9?'0':'')+((Date)fieldValue).day();
+            //return ((Date)fieldValue).format();
+        } else if(fieldType == 'DATETIME'){
+            return ((DateTime)fieldValue).format('yyyy-MM-dd') + 'T' + ((DateTime)fieldValue).format('HH:mm:ss') + 'Z';
+            //return ((DateTime)fieldValue).format('yyyy-MM-ddTHH:mm:ssZ');
+        } else if(fieldType == 'DOUBLE' || fieldType == 'INTEGER' || fieldType == 'CURRENCY' || fieldType == 'PERCENT'){
+            return String.valueOf(fieldValue);
+        } else if(fieldType == 'REFERENCE'){
+            return String.valueOf(fieldValue);
+        } else {
+            return String.valueOf(fieldValue);
+        }
+    }
+
+
+    @AuraEnabled
+    public static Id SubmitQueryTsv(String objectApiName, list<string> fields, string whereClause, string sortOrder, string limitCount, boolean allRows) {
+
+
+        // Build the query string
+        string query = constructQuery(objectApiName, fields, whereClause, sortOrder, limitCount, allRows);
+
+        
+        // Execute the query
+        List<SObject> queryResults = Database.query(query);
+
+        String csvOutput = String.join(fields, '\t') + '\n';
+        String fileRow = '';
+
+        for (SObject obj : queryResults) {
+            fileRow = '';
+
+            for (String field : fields) {
+                if (field.contains('.')) {
+                    // Handle related object fields
+                    List<String> relationshipParts = field.split('\\.');
+                    SObject relatedObj = obj;
+                    Object fieldValue = null;
+
+                    for (Integer i = 0; i < relationshipParts.size(); i++) {
+                        if (relatedObj == null) break;
+
+                        if (i == relationshipParts.size() - 1) {
+                            fieldValue = relatedObj.get(relationshipParts[i]);
+                        } else {
+                            relatedObj = relatedObj.getSObject(relationshipParts[i]);
+                        }
+                    }
+
+                    if(fileRow != ''){
+                        fileRow += '\t';
+                    }
+                    fileRow += (fieldValue==null)?'':String.valueOf(fieldValue);
+                } else {
+
+                    if(fileRow != ''){
+                        fileRow += '\t';
+                    }
+                    // Handle fields on the main object
+                    fileRow += (obj.get(field)==null)?'':string.valueOf(obj.get(field));
+                }
+            }
+            csvOutput += fileRow + '\n';
+        }
+
+        ContentVersion cv = new ContentVersion();
+        cv.Title = 'QueryResults ' + System.currentTimeMillis();
+        cv.VersionData = Blob.valueOf(csvOutput);
+        cv.PathOnClient = cv.Title + '.tsv';
+
+        insert cv;
+
+        return cv.Id;
+
+    }
+
+    
+
+
+    @AuraEnabled
+    public static Integer SubmitQueryCount(String objectApiName, string whereClause, boolean allRows) {
+
+        list<string> fields = new list<string>();
+        fields.add('count(Id)');
+
+        string query = constructQuery(objectApiName, fields, whereClause, null, null, allRows);
+        
+        // Execute the query
+        List<SObject> queryResults = Database.query(query);
+
+        return (Integer)queryResults[0].get('expr0');
+
+    }
+
+
+    public static string constructQuery(String objectApiName, list<string> fields, string whereClause, string sortOrder, string limitCount, boolean allRows) {
+
+
+        // Build the query string
+        String query = 'SELECT ' + String.join(fields, ', ') + ' FROM ' + objectApiName;
+        if(whereClause != null && whereClause!=''){
+            query += ' WHERE ' + whereClause;
+        
+        }
+        if(sortOrder!=null && sortOrder!=''){
+            query += ' ORDER BY ' + sortOrder;
+        
+        } 
+        if(limitCount!=null && limitCount!=''){
+            query += ' LIMIT ' + limitCount;
+        }
+        
+        if(allRows != null && allRows){
+            query += ' ALL ROWS ';
+        }
+
+        return query;
+    }
+    
+
+    
+
+
+    @AuraEnabled
+    public static void SubmitQueryBatch(String objectApiName, list<string> fields, string whereClause, string sortOrder, string limitCount, boolean allRows) {
+    }
+
+ 
+
+
+    public class FieldWrapper{
+        
+        @AuraEnabled
+        public String Name;
+        
+        @AuraEnabled
+        public String Type;
+        
+        @AuraEnabled
+        public Boolean Filterable;
+        
+        @AuraEnabled
+        public Boolean Groupable;
+        
+        @AuraEnabled
+        public Boolean Updatable;
+        
+        @AuraEnabled
+        public Boolean Linkable;
+    }
+    
+    public class ResultWrapper {
+        @AuraEnabled public String RowId;
+        @AuraEnabled public List<FieldData> Fields;
+    }
+
+    public class FieldData {
+        @AuraEnabled public String Name;
+        @AuraEnabled public String Value;
+        @AuraEnabled public Boolean Linkable;
+    }
+
+
+
+}
