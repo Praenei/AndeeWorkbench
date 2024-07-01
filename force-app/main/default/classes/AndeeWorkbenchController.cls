@@ -283,9 +283,6 @@ public with sharing class AndeeWorkbenchController {
     }
 
 
-    
-
-
     @AuraEnabled
     public static QuerySingleRowWrapper  GetSingleEntryData(id selectedId) {
         
@@ -299,11 +296,13 @@ public with sharing class AndeeWorkbenchController {
 
         string query = 'SELECT ' + String.join(objFieldsMap.keyset(), ', ') + ' FROM ' + objectApiName + ' WHERE Id = \'' + selectedId + '\'';
 
+
         // Execute the query
         List<SObject> queryResults = Database.query(query);
 
         for(string fieldName : objFieldsMap.keyset()){
             objFieldsMap.get(fieldName).Value = FormatFieldValue(queryResults[0].get(fieldName), objFieldsMap.get(fieldName).Type);
+            objFieldsMap.get(fieldName).OriginalValue = FormatFieldValue(queryResults[0].get(fieldName), objFieldsMap.get(fieldName).Type);
         }
 
         QuerySingleRowWrapper wrapper = new QuerySingleRowWrapper();
@@ -311,6 +310,44 @@ public with sharing class AndeeWorkbenchController {
         wrapper.Fields = objFieldsMap.values();
 
         return wrapper;
+
+    }
+    
+    
+    @AuraEnabled
+    public static void  UpdateSingleEntryData(QuerySingleRowWrapper querySingleRowWrapper) {
+
+        system.debug(querySingleRowWrapper);
+
+        // get the Id from querySingleRowWrapper    (always the first field in the list)
+        id selectedId = Id.valueOf(querySingleRowWrapper.Fields[0].Value);
+        
+        string objectApiName = selectedId.getsobjecttype().getDescribe().getName();
+        map<string, FieldWrapper> objFieldsMap = new map<string, FieldWrapper>();
+        list<FieldWrapper> objFields = querySingleRowWrapper.Fields;
+        for(FieldWrapper objField : objFields){
+            objFieldsMap.put(objField.Name, objField);
+        }
+
+        // create an object of type objectApiName
+        SObject obj = Schema.getGlobalDescribe().get(objectApiName).newSObject();
+
+        boolean hasFieldValueChanged = false;
+
+        // loop through the fields in querySingleRowWrapper.Fields and set the values on the object
+        for(FieldWrapper field : objFields){
+            if(field.Updatable || field.Name == 'Id'){
+                obj.put(field.Name, field.Value);
+            }
+            if(field.Value != field.OriginalValue){
+                hasFieldValueChanged = true;
+            }
+        }
+
+        if(hasFieldValueChanged){
+            update obj;
+        }
+
 
     }
 
@@ -339,6 +376,9 @@ public with sharing class AndeeWorkbenchController {
         
         @AuraEnabled
         public String Value;
+        
+        @AuraEnabled
+        public String OriginalValue;
     }
     
     public class ResultWrapper {
