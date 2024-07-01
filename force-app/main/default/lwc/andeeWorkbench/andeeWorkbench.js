@@ -8,6 +8,7 @@ import submitQueryBatch from '@salesforce/apex/BatchAndeeWorkbench.SubmitQueryBa
 import getBatchJobStatus from '@salesforce/apex/BatchAndeeWorkbench.GetBatchJobStatus';
 import getOrgDomainUrl from '@salesforce/apex/AndeeWorkbenchController.GetOrgDomainUrl';
 import getSingleEntryData from '@salesforce/apex/AndeeWorkbenchController.GetSingleEntryData';
+import updateSingleEntryData from '@salesforce/apex/AndeeWorkbenchController.UpdateSingleEntryData';
 
 export default class AndeeWorkbench extends LightningElement {    
 
@@ -31,6 +32,7 @@ export default class AndeeWorkbench extends LightningElement {
     @track selectedSingleRecordId;
     @track selectedSingleRecordObject;
     @track rowData = [];
+    @track isUpdateView = false;
 
     fieldArray = [];
 
@@ -291,6 +293,7 @@ export default class AndeeWorkbench extends LightningElement {
             this.queryHeadings = ['Download CSV'];
             fields.Value = 'Download';
             fields.Linkable = true;
+            fields.IsDownloadLink = true;
             fields.HRef = this.orgDomainUrl + '/lightning/r/ContentDocument/'+data+'/view';
             this.queryResults[0] = {};
             this.queryResults[0].RowId = 'dummy';
@@ -598,6 +601,7 @@ export default class AndeeWorkbench extends LightningElement {
     }
 
     getSingleEntryData(recordId){
+        this.isUpdateView = false;
         getSingleEntryData({selectedId : recordId})
         .then(data => {
             this.rowData = [];
@@ -612,6 +616,41 @@ export default class AndeeWorkbench extends LightningElement {
             console.error('error (displaySingleRow) => ', error); // error handling
             this.isLoading = false;
         })
+    }
+
+
+    updateView(event){
+        console.log('starting updateView')
+        
+        this.isLoading = true;
+
+        if(this.isUpdateView){
+
+            //create a variable called parm which has 2 properties called ObjectApiName & Fields
+            // Set these properties to have the values of this.selectedSingleRecordObject & this.rowData respectively
+            var parm = {};
+                       
+            parm.ObjectApiName = this.selectedSingleRecordObject;
+            parm.Fields = this.rowData;
+
+            console.log('this.rowData: ' + this.rowData);
+            console.dir(parm);
+
+
+            updateSingleEntryData({querySingleRowWrapper : parm})
+            .then(data => {
+                this.error = undefined;
+            
+            })
+            .catch(error => {
+                this.error = error;
+                console.error('error (updateView) => ', error); // error handling
+            })
+
+        }
+
+        this.isUpdateView = !this.isUpdateView;
+        this.isLoading = false;
     }
 
 }
