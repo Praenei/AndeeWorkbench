@@ -19,7 +19,7 @@
                         <div class="slds-media slds-no-space slds-grow">
                             <h2 class="slds-card__header-title">
                                 <span class="slds-truncate slds-m-right--xx-small" title="Workbench">
-                                    Workbench 28.6.7
+                                    Workbench 1.7.5
                                 </span>
                             </h2>
                         </div>
@@ -199,8 +199,12 @@
                                     <template for:each={record.Fields} for:item="field">
                                         <td key={field.Name}>
                                             <template if:true={field.Linkable}>
-                                                    <!--<a href={field.HRef} target="_blank">{field.Value}</a>-->
+                                                <template if:false={field.IsDownloadLink}>
                                                     <a data-id={field.Value} onclick={displaySingleRow}>{field.Value}</a>
+                                                </template>
+                                                <template if:true={field.IsDownloadLink}>
+                                                    <a href={field.HRef} target="_blank">{field.Value}</a>
+                                                </template>
                                             </template>
                                             <template if:false={field.Linkable}>
                                                 {field.Value}
@@ -234,24 +238,41 @@
 
                 <p>
                     <input type="submit" name="back" value="Back" onclick={displayQueryView}>
+                    <input type="submit" name="update" value="Update" onclick={updateView}>
                 </p>
 
                 <table id="single_row_results" class="dataTable">
                     <tbody>
                         <template for:each={rowData} for:item="record">
-                            <tr key={record.Name}>
-                                <td>
-                                    {record.Name}
-                                </td>
-                                <td>
-                                    <template if:true={record.Linkable}>
-                                        <a data-id={record.Value} onclick={displaySingleRow}>{record.Value}</a>
-                                    </template>
-                                    <template if:false={record.Linkable}>
-                                        {record.Value}
-                                    </template>
-                                </td>
-                            </tr>
+                            <template if:false={isUpdateView}>
+                                <tr key={record.Name}>
+                                    <td>
+                                        {record.Name}
+                                    </td>
+                                    
+                                    <td>
+                                        <template if:true={record.Linkable}>
+                                            <a data-id={record.Value} onclick={displaySingleRow}>{record.Value}</a>
+                                        </template>
+                                        <template if:false={record.Linkable}>
+                                            {record.Value}
+                                        </template>
+                                    </td>
+                                </tr>
+                            </template>
+                                
+                            <template if:true={isUpdateView}>
+                                <template if:true={record.Updatable}>
+                                    <tr key={record.Name}>
+                                        <td>
+                                            {record.Name}
+                                        </td>
+                                        <td>
+                                            <input type="text" data-id="updateField" size="30" name="updateField" value={record.Value}/>
+                                        </td>
+                                    </tr>
+                                </template>
+                            </template>
                         </template>
 
                     </tbody>
@@ -260,6 +281,7 @@
 
                 <p>
                     <input type="submit" name="back" value="Back" onclick={displayQueryView}>
+                    <input type="submit" name="update" value="Update" onclick={updateView}>
                 </p>
             </template>
 
