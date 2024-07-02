@@ -1,5 +1,6 @@
 import { LightningElement, wire, track } from 'lwc';
 
+// Import Apex methods
 import getAllObjects from '@salesforce/apex/AndeeWorkbenchController.GetAllObjects';
 import getFieldsForObject from '@salesforce/apex/AndeeWorkbenchController.GetFieldsForObject';
 import submitQuery from '@salesforce/apex/AndeeWorkbenchController.SubmitQuery';
@@ -11,7 +12,7 @@ import getSingleEntryData from '@salesforce/apex/AndeeWorkbenchController.GetSin
 import updateSingleEntryData from '@salesforce/apex/AndeeWorkbenchController.UpdateSingleEntryData';
 
 export default class AndeeWorkbench extends LightningElement {    
-
+    // Track variables for component state
     @track isLoading = true;
     @track error;
     
@@ -29,7 +30,7 @@ export default class AndeeWorkbench extends LightningElement {
     @track batchJobId;
     @track jobStatus;
     @track contentVersionUrl;
-    @track isBatchJobCompleted;;
+    @track isBatchJobCompleted;
     @track isDisplaySingleId;
     @track selectedSingleRecordId;
     @track selectedSingleRecordObject;
@@ -48,10 +49,9 @@ export default class AndeeWorkbench extends LightningElement {
 
     chainOfSingleRowIds = [];
 
-
-    // When component is initialised i.e. Aura's doInit.
+    // Initialization function when component is loaded
     connectedCallback() { 
-
+        // Get the organization's domain URL
         getOrgDomainUrl()
         .then(result => {
             this.orgDomainUrl = result;
@@ -63,13 +63,13 @@ export default class AndeeWorkbench extends LightningElement {
                 window.console.log('@@@@ ERROR '+ error);
             }
         })
-
     }
 
-
+    // Wire adapter to get all Salesforce objects
     @wire(getAllObjects)
     wiredAllObjects({ error, data }) {
         if (data) {
+            // Transform data into options for the object select dropdown
             var returnOpts = [];
             var allValues = data;
             for (var i = 0; i < allValues.length; i++) {
@@ -78,47 +78,44 @@ export default class AndeeWorkbench extends LightningElement {
 
             this.objectOptions = returnOpts; 
             this.isLoading = false;
-
         } else if (error) {
             this.error = error.body.message;
-            console.error('error (wiredAllObjects) => ', error); // error handling
+            console.error('error (wiredAllObjects) => ', error);
             this.isLoading = false;
         }
     }
 
-
+    // Function to get fields for a selected object
     getFields(){
-        
         getFieldsForObject({objectName : this.objectValue})
         .then(data => {
             var returnOpts = [];
             var whereOpts = [];
             this.fieldArray = [];
-            //returnOpts = [ ...returnOpts, {label: 'count()', value: 'count()'} ];
             var allValues = data;
             for (var i = 0; i < allValues.length; i++) {
+                // Create options for field select dropdown
                 returnOpts = [ ...returnOpts, {label: allValues[i].Name, value: allValues[i].Name} ];
                 if(allValues[i].Filterable){
+                    // Create options for where clause fields
                     whereOpts = [ ...whereOpts, {label: allValues[i].Name, value: allValues[i].Name} ];
                 }
-                this.fieldArray[allValues[i].Name.toLowerCase()]=allValues[i];
+                this.fieldArray[allValues[i].Name.toLowerCase()] = allValues[i];
             }
 
             this.fieldOptions = returnOpts;
             this.fieldWhereOptions = whereOpts;
             this.isLoading = false;
             this.error = undefined;
-            
         })
         .catch(error => {
             this.error = error.body.message;
-            console.error('error (getFieldsForObject) => ', error); // error handling
+            console.error('error (getFieldsForObject) => ', error);
             this.isLoading = false;
         })
     }
 
-
-
+    // Handler for object selection change
     objectChanged(event){
         console.log('starting objectChanged');
         this.isLoading = true;
@@ -128,23 +125,27 @@ export default class AndeeWorkbench extends LightningElement {
         this.getFields();
     }
 
+    // Function to submit a SOQL query
     submitQuery(){
         console.log('starting submitQuery');
         this.isLoading = true;
         this.jobStatus = null;
 
+        // Get the SOQL query from the textarea
         this.soqlQuery = this.template.querySelector('[data-id="soql_query_textarea"]').value;
         var upperSoql = this.soqlQuery.toUpperCase();
 
         console.log('soqlQuery :' +  this.soqlQuery);
         console.log('objectApiName :' +  this.objectValue);
 
+        // Extract fields from the SOQL query
         var fields = this.findStringBetween(this.soqlQuery, 'SELECT ', ' FROM ').split(',');
         for(var i=0; i<fields.length; i++){
             fields[i] = fields[i].trim();
         }
         console.log(fields);
 
+        // Extract WHERE clause from the SOQL query
         var whereClause = '';
         if(upperSoql.indexOf(' WHERE ') > -1){
             if(upperSoql.indexOf(' ORDER BY ') > -1){
@@ -155,13 +156,14 @@ export default class AndeeWorkbench extends LightningElement {
         }
         console.log(whereClause);
 
+        // Extract ORDER BY clause from the SOQL query
         var sortOrder = '';
         if(upperSoql.indexOf(' ORDER BY ') > -1){
             sortOrder = this.findStringBetween(this.soqlQuery, ' ORDER BY ', ' LIMIT ');
         }
         console.log(sortOrder);
 
-        
+        // Extract LIMIT clause from the SOQL query
         var limit = '';
         if(upperSoql.indexOf(' LIMIT ') > -1){
             limit = this.findStringBetween(this.soqlQuery, ' LIMIT ', ' ??? ');
@@ -171,10 +173,12 @@ export default class AndeeWorkbench extends LightningElement {
         console.log('All rows :' + this.template.querySelector('[data-id="excludeDeleted"]').checked);
         
         if(this.count) {
+            // If count is true, submit a count query
             submitQueryCount({objectApiName : this.objectValue,
                 whereClause : whereClause,
                 allRows : this.template.querySelector('[data-id="excludeDeleted"]').checked})
                 .then(data => {
+                    // Process count query results
                     this.queryResults = [];
                     this.queryHeadings = ['Count'];
                     fields.Value = data;
@@ -190,11 +194,11 @@ export default class AndeeWorkbench extends LightningElement {
             })
             .catch(error => {
                 this.error = error.body.message;
-                console.error('error (submitQueryCount) => ', error); // error handling
+                console.error('error (submitQueryCount) => ', error);
                 this.isLoading = false;
             })
-
         } else {
+            // Submit a regular SOQL query
             submitQuery({objectApiName : this.objectValue,
                 fields : fields,
                 whereClause : whereClause, 
@@ -203,6 +207,7 @@ export default class AndeeWorkbench extends LightningElement {
                 allRows : this.template.querySelector('[data-id="excludeDeleted"]').checked})
             .then(data => {
                 console.log(data);
+                // Process query results
                 this.queryHeadings = [];
                 this.queryResults = [];
                 var results = [];
@@ -216,9 +221,9 @@ export default class AndeeWorkbench extends LightningElement {
                     this.queryHeadings = headings;
                 }
 
-
                 this.queryResults = data;
 
+                // Process field linkability
                 for(var i=0; i<this.queryResults.length; i++){
                     for(var j=0; j<this.queryResults[i].Fields.length; j++){
                         if (this.fieldArray[this.queryResults[i].Fields[j].Name.toLowerCase()]?.Linkable !== undefined) {
@@ -235,33 +240,33 @@ export default class AndeeWorkbench extends LightningElement {
             })
             .catch(error => {
                 this.error = error.body.message;
-                console.error('error (submitQuery) => ', error); // error handling
+                console.error('error (submitQuery) => ', error);
                 this.isLoading = false;
             })
         }
-
-
     }
 
-    
-
+    // Function to submit a TSV query
     submitTsvQuery(){
         console.log('starting submitTsvQuery');
         this.isLoading = true;
         this.jobStatus = null;
 
+        // Get the SOQL query from the textarea
         this.soqlQuery = this.template.querySelector('[data-id="soql_query_textarea"]').value;
         var upperSoql = this.soqlQuery.toUpperCase();
 
         console.log('soqlQuery :' +  this.soqlQuery);
         console.log('objectApiName :' +  this.objectValue);
 
+        // Extract fields from the SOQL query
         var fields = this.findStringBetween(this.soqlQuery, 'SELECT ', ' FROM ').split(',');
         for(var i=0; i<fields.length; i++){
             fields[i] = fields[i].trim();
         }
         console.log(fields);
 
+        // Extract WHERE clause from the SOQL query
         var whereClause = '';
         if(upperSoql.indexOf(' WHERE ') > -1){
             if(upperSoql.indexOf(' ORDER BY ') > -1){
@@ -272,13 +277,14 @@ export default class AndeeWorkbench extends LightningElement {
         }
         console.log(whereClause);
 
+        // Extract ORDER BY clause from the SOQL query
         var sortOrder = '';
         if(upperSoql.indexOf(' ORDER BY ') > -1){
             sortOrder = this.findStringBetween(this.soqlQuery, ' ORDER BY ', ' LIMIT ');
         }
         console.log(sortOrder);
 
-        
+        // Extract LIMIT clause from the SOQL query
         var limit = '';
         if(upperSoql.indexOf(' LIMIT ') > -1){
             limit = this.findStringBetween(this.soqlQuery, ' LIMIT ', ' ??? ');
@@ -293,6 +299,7 @@ export default class AndeeWorkbench extends LightningElement {
             limitCount : limit,
             allRows : this.template.querySelector('[data-id="excludeDeleted"]').checked})
         .then(data => {
+            // Process TSV query results
             this.queryResults = [];
             this.queryHeadings = ['Download CSV'];
             fields.Value = 'Download';
@@ -310,11 +317,9 @@ export default class AndeeWorkbench extends LightningElement {
         })
         .catch(error => {
             this.error = error.body.message;
-            console.error('error (submitQueryTsv) => ', error); // error handling
+            console.error('error (submitQueryTsv) => ', error);
             this.isLoading = false;
         })
-
-
     }
 
     
