@@ -37,13 +37,13 @@ export default class AndeeWorkbench extends LightningElement {
     @track selectedSingleRecordObject;
     @track rowData = [];
     @track isUpdateView = false;
+    @track limit = "500";
 
     fieldArray = [];
 
     fields = [];
     whereClause = ""; 
     sortOrder = "";
-    limit = "200";
 
     orgDomainUrl = "";
 
@@ -529,7 +529,7 @@ export default class AndeeWorkbench extends LightningElement {
         if(this.template.querySelector('[data-id="QB_limit_txt"]').value != ''){
             this.limit = this.template.querySelector('[data-id="QB_limit_txt"]').value;
         } else {
-            this.limit = 200;
+            this.limit = '';
         }
         console.log(this.limit);
         this.rebuildQuery();
@@ -604,14 +604,16 @@ export default class AndeeWorkbench extends LightningElement {
     rebuildQuery(event){
         console.log('starting rebuildQuery');        
 
-        var tempSoql = 'SELECT ' + this.fields.join(', ') + ' from ' + this.objectValue;
+        var tempSoql = 'SELECT ' + this.fields.join(', ') + ' FROM ' + this.objectValue;
         if (this.whereClause != '') {
             tempSoql += ' WHERE ' + this.whereClause;
         }
         if(this.sortOrder != ''){
             tempSoql += ' ORDER BY ' + this.sortOrder;
         }
-        tempSoql += ' LIMIT ' + this.limit;
+        if(this.limit != ''){
+            tempSoql += ' LIMIT ' + this.limit;
+        }
         this.soqlQuery = tempSoql;
         console.log(this.soqlQuery);
 
