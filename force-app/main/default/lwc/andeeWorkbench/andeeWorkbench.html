@@ -19,13 +19,21 @@
                         <div class="slds-media slds-no-space slds-grow">
                             <h2 class="slds-card__header-title">
                                 <span class="slds-truncate slds-m-right--xx-small" title="Workbench">
-                                    Workbench 1.7.5
+                                    Workbench 2.7.1
                                 </span>
                             </h2>
                         </div>
                     </div>
                 </div>
             </div>
+
+            <template if:true={error}>
+                <div data-id="errorDiv">
+                    <div data-id="errorDivInner" class="slds-notify slds-notify--alert slds-theme--error slds-theme--alert-texture" role="alert" >
+                    {error}
+                    </div>
+                </div>
+            </template>
 
             <template if:false={isDisplaySingleId}>
                 <div>
@@ -46,16 +54,7 @@
                                     <table border="0" align="right" style="width:100%">
                                         <tbody>
                                             <tr>
-                                                <td valign="top" colspan="2">
-                                                    <!--View as:<br>
-                                                    <label>
-                                                        <input type="radio" data-id="export_action_screen" name="export_action" value="screen" checked >
-                                                        List
-                                                    </label>&nbsp;
-                                                    <label>
-                                                        <input type="radio" data-id="export_action_csv" name="export_action" value="csv">
-                                                        CSV
-                                                    </label>-->&nbsp;
+                                                <td valign="top" colspan="2">&nbsp;
                                                 </td>
                                                 <td valign="top" colspan="2">
                                                     Deleted and archived records:<br>
@@ -76,7 +75,7 @@
                             <tr>
                                 <td valign="top" width="1" style="margin-top:2em;">
                                     Fields:
-                                    <select data-id="fieldSelect" id="fieldSelect" style="width: 16em;" multiple size="5" onchange={fieldChanged}>
+                                    <select data-id="fieldSelect" id="fieldSelect" style="width: 16em;" multiple size="8" onchange={fieldChanged}>
                                         <option value='count()'>count()</option>
                                         <template for:each={fieldOptions} for:item="fo" for:index="index">
                                             <option key={fo.index} value={fo.value}>{fo.label}</option>
@@ -85,7 +84,7 @@
                                 </td>
                                 <td>
                                     <table id="QB_right_sub_table" border="0" align="right" style="width:100%">
-                                        <tbody>
+                                        <tbody data-id="sort_and_filter">
                                             <tr id="sort_selection_headers">
                                                 <td colspan="2">
                                                     <br>Sort results by:
@@ -116,36 +115,123 @@
                                                     <input type="text" data-id="QB_limit_txt" size="10" name="QB_limit_txt" value="200" onkeyup={limitChanged}>
                                                 </td>
                                             </tr>
-                                            <tr id="filter_row_0"> 
-                                                <td colspan="4" valign="top" nowrap="true">
-                                                    <br>Filter results by:<br>
-                                                    <select data-id="QB_filter_field_0" name="QB_filter_field_0" style="width: 16em;" onchange={filterChanged}>
-                                                        <option value=""></option>                                                
-                                                        <template for:each={fieldWhereOptions} for:item="fo" for:index="index">
-                                                            <option key={fo.index} value={fo.value}>{fo.label}</option>
-                                                        </template>
-                                                    </select>&nbsp;
-                                                    <select data-id="QB_filter_compOper_0" name="QB_filter_compOper_0" style="width: 6em;" onchange={filterChanged}>
-                                                        <option value="=">=</option>
-                                                        <option value="!=">≠</option>
-                                                        <option value="<">&lt;</option>
-                                                        <option value="<=">≤</option>
-                                                        <option value=">">&gt;</option>
-                                                        <option value=">=">≥</option>
-                                                        <option value="starts">starts with</option>
-                                                        <option value="ends">ends with</option>
-                                                        <option value="contains">contains</option>
-                                                        <option value="IN">in</option>
-                                                        <option value="NOT IN">not in</option>
-                                                        <option value="INCLUDES">includes</option>
-                                                        <option value="EXCLUDES">excludes</option>
-                                                    </select>
-                                                    &nbsp;
-                                                    <input type="text" data-id="QB_filter_value_0" size="27" name="QB_filter_value_0" value="" onkeyup={filterChanged}>
+                                            <tr>
+                                                <td>
+                                                    <table data-id="filter_rows">
+                                                        <tr>
+                                                            <td colspan="4">
+                                                                Filter results by:
+                                                            </td>
+                                                        </tr>
+
+                                                        <tr data-id="filter-row-0">
+                                                            <td colspan="4" valign="top" nowrap="true">
+                                                                
+                                                                <select data-id="QB_filter_field_0" name="QB_filter_field_0" style="width: 16em;" onchange={filterChanged}>
+                                                                    <option value=""></option>                                                
+                                                                    <template for:each={fieldWhereOptions} for:item="fo" for:index="index">
+                                                                        <option key={fo.index} value={fo.value}>{fo.label}</option>
+                                                                    </template>
+                                                                </select>&nbsp;
+                                                                <select data-id="QB_filter_compOper_0" name="QB_filter_compOper_0" style="width: 6em;" onchange={filterChanged}>
+                                                                    <option value="=">=</option>
+                                                                    <option value="!=">≠</option>
+                                                                    <option value="<">&lt;</option>
+                                                                    <option value="<=">≤</option>
+                                                                    <option value=">">&gt;</option>
+                                                                    <option value=">=">≥</option>
+                                                                    <option value="starts">starts with</option>
+                                                                    <option value="ends">ends with</option>
+                                                                    <option value="contains">contains</option>
+                                                                </select>
+                                                                &nbsp;
+                                                                <input type="text" data-id="QB_filter_value_0" size="27" name="QB_filter_value_0" value="" onkeyup={filterChanged}>
+                                                            </td>
+                                                        </tr>
+
+                                                        <tr data-id="filter-row-1">
+                                                            <td colspan="4" valign="top" nowrap="true">
+                                                                
+                                                                <select data-id="QB_filter_field_1" name="QB_filter_field_1" style="width: 16em;" onchange={filterChanged}>
+                                                                    <option value=""></option>                                                
+                                                                    <template for:each={fieldWhereOptions} for:item="fo" for:index="index">
+                                                                        <option key={fo.index} value={fo.value}>{fo.label}</option>
+                                                                    </template>
+                                                                </select>&nbsp;
+                                                                <select data-id="QB_filter_compOper_1" name="QB_filter_compOper_1" style="width: 6em;" onchange={filterChanged}>
+                                                                    <option value="=">=</option>
+                                                                    <option value="!=">≠</option>
+                                                                    <option value="<">&lt;</option>
+                                                                    <option value="<=">≤</option>
+                                                                    <option value=">">&gt;</option>
+                                                                    <option value=">=">≥</option>
+                                                                    <option value="starts">starts with</option>
+                                                                    <option value="ends">ends with</option>
+                                                                    <option value="contains">contains</option>
+                                                                </select>
+                                                                &nbsp;
+                                                                <input type="text" data-id="QB_filter_value_1" size="27" name="QB_filter_value_1" value="" onkeyup={filterChanged}>
+                                                            </td>
+                                                        </tr>
+
+                                                        
+
+                                                        <tr data-id="filter-row-2">
+                                                            <td colspan="4" valign="top" nowrap="true">
+                                                                
+                                                                <select data-id="QB_filter_field_2" name="QB_filter_field_2" style="width: 16em;" onchange={filterChanged}>
+                                                                    <option value=""></option>                                                
+                                                                    <template for:each={fieldWhereOptions} for:item="fo" for:index="index">
+                                                                        <option key={fo.index} value={fo.value}>{fo.label}</option>
+                                                                    </template>
+                                                                </select>&nbsp;
+                                                                <select data-id="QB_filter_compOper_2" name="QB_filter_compOper_2" style="width: 6em;" onchange={filterChanged}>
+                                                                    <option value="=">=</option>
+                                                                    <option value="!=">≠</option>
+                                                                    <option value="<">&lt;</option>
+                                                                    <option value="<=">≤</option>
+                                                                    <option value=">">&gt;</option>
+                                                                    <option value=">=">≥</option>
+                                                                    <option value="starts">starts with</option>
+                                                                    <option value="ends">ends with</option>
+                                                                    <option value="contains">contains</option>
+                                                                </select>
+                                                                &nbsp;
+                                                                <input type="text" data-id="QB_filter_value_2" size="27" name="QB_filter_value_2" value="" onkeyup={filterChanged}>
+                                                            </td>
+                                                        </tr>
+
+                                                        <tr data-id="filter-row-3">
+                                                            <td colspan="4" valign="top" nowrap="true">
+                                                                
+                                                                <select data-id="QB_filter_field_3" name="QB_filter_field_3" style="width: 16em;" onchange={filterChanged}>
+                                                                    <option value=""></option>                                                
+                                                                    <template for:each={fieldWhereOptions} for:item="fo" for:index="index">
+                                                                        <option key={fo.index} value={fo.value}>{fo.label}</option>
+                                                                    </template>
+                                                                </select>&nbsp;
+                                                                <select data-id="QB_filter_compOper_3" name="QB_filter_compOper_3" style="width: 6em;" onchange={filterChanged}>
+                                                                    <option value="=">=</option>
+                                                                    <option value="!=">≠</option>
+                                                                    <option value="<">&lt;</option>
+                                                                    <option value="<=">≤</option>
+                                                                    <option value=">">&gt;</option>
+                                                                    <option value=">=">≥</option>
+                                                                    <option value="starts">starts with</option>
+                                                                    <option value="ends">ends with</option>
+                                                                    <option value="contains">contains</option>
+                                                                </select>
+                                                                &nbsp;
+                                                                <input type="text" data-id="QB_filter_value_3" size="27" name="QB_filter_value_3" value="" onkeyup={filterChanged}>
+                                                            </td>
+                                                        </tr>
+
+
+                                                    </table>
                                                 </td>
-                                                <td id="filter_plus_cell_0" valign="bottom">
-                                                    <img id="filter_plus_button" src="static/images/plus_icon.jpg?v=49.0.0" onclick={addFilterRow} style="padding-top: 4px; cursor: pointer;">
-                                                </td>
+                                                <!--<td id="filter_plus_cell" valign="bottom">
+                                                    <lightning-icon icon-name='action:new' alternative-text='new' size='xx-small' title='new' onclick={addFilterRow}></lightning-icon>
+                                                </td>-->
                                             </tr>
                                         </tbody>
                                     </table>
@@ -268,7 +354,7 @@
                                             {record.Name}
                                         </td>
                                         <td>
-                                            <input type="text" data-id="updateField" size="30" name="updateField" value={record.Value}/>
+                                            <input type="text" data-id="updateField" size="30" name="updateField" data-fieldname={record.Name} value={record.Value}/>
                                         </td>
                                     </tr>
                                 </template>

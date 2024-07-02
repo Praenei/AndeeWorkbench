@@ -13,12 +13,14 @@ import updateSingleEntryData from '@salesforce/apex/AndeeWorkbenchController.Upd
 export default class AndeeWorkbench extends LightningElement {    
 
     @track isLoading = true;
+    @track error;
     
     @track objectValue = "";
     @track objectOptions = [];
     
     @track fieldOptions = [];
     @track fieldWhereOptions = [];
+
     @track soqlQuery = '';
 
     @track queryHeadings = [];
@@ -49,6 +51,7 @@ export default class AndeeWorkbench extends LightningElement {
 
     // When component is initialised i.e. Aura's doInit.
     connectedCallback() { 
+
         getOrgDomainUrl()
         .then(result => {
             this.orgDomainUrl = result;
@@ -56,6 +59,7 @@ export default class AndeeWorkbench extends LightningElement {
         .catch(error => {
             window.console.log('error (connectedCallback) =====> '+JSON.stringify(error));
             if(error) {
+                this.error = error.body.message;
                 window.console.log('@@@@ ERROR '+ error);
             }
         })
@@ -76,7 +80,7 @@ export default class AndeeWorkbench extends LightningElement {
             this.isLoading = false;
 
         } else if (error) {
-            this.error = error;
+            this.error = error.body.message;
             console.error('error (wiredAllObjects) => ', error); // error handling
             this.isLoading = false;
         }
@@ -107,7 +111,7 @@ export default class AndeeWorkbench extends LightningElement {
             
         })
         .catch(error => {
-            this.error = error;
+            this.error = error.body.message;
             console.error('error (getFieldsForObject) => ', error); // error handling
             this.isLoading = false;
         })
@@ -185,7 +189,7 @@ export default class AndeeWorkbench extends LightningElement {
             
             })
             .catch(error => {
-                this.error = error;
+                this.error = error.body.message;
                 console.error('error (submitQueryCount) => ', error); // error handling
                 this.isLoading = false;
             })
@@ -230,7 +234,7 @@ export default class AndeeWorkbench extends LightningElement {
             
             })
             .catch(error => {
-                this.error = error;
+                this.error = error.body.message;
                 console.error('error (submitQuery) => ', error); // error handling
                 this.isLoading = false;
             })
@@ -305,7 +309,7 @@ export default class AndeeWorkbench extends LightningElement {
         
         })
         .catch(error => {
-            this.error = error;
+            this.error = error.body.message;
             console.error('error (submitQueryTsv) => ', error); // error handling
             this.isLoading = false;
         })
@@ -374,7 +378,7 @@ export default class AndeeWorkbench extends LightningElement {
         
         })
         .catch(error => {
-            this.error = error;
+            this.error = error.body.message;
             console.error('error (submitQueryBatch) => ', error); // error handling
             this.isLoading = false;
         })
@@ -399,7 +403,7 @@ export default class AndeeWorkbench extends LightningElement {
                 }
             })
             .catch(error => {
-                this.error = error;
+                this.error = error.body.message;
                 console.error('error (monitorJobProgress) => ', error); // error handling
                 clearInterval(checkStatus);
                 this.isLoading = false;
@@ -410,6 +414,29 @@ export default class AndeeWorkbench extends LightningElement {
 
     addFilterRow(){
         console.log('addFilterRow');
+
+        // Get the id of the next filter row to create
+        /*var nextRow = 0;
+        for(var i = 0; i < 99; i++) {
+            const dataId = '[data-id="QB_filter_field_'+i + '"]';
+            var filterRow = this.template.querySelector(dataId);
+            console.log(i + ' : ' + filterRow);
+            if(filterRow===undefined || filterRow===null){
+                nextRow = i;
+                break;
+            }
+        }
+
+        var firstFilterRow = this.template.querySelector('[data-id="first-filter-row"]');
+        var newFilterRow = firstFilterRow.innerHTML;
+        newFilterRow = newFilterRow.replace('"QB_filter_field_0"', '"QB_filter_field_'+nextRow+'"');
+        newFilterRow = newFilterRow.replace('"QB_filter_compOper_0"', '"QB_filter_compOper_'+nextRow+'"');
+        newFilterRow = newFilterRow.replace('"QB_filter_value_0"', '"QB_filter_value_'+nextRow+'"');
+        var filterTable = this.template.querySelector('[data-id="filter_rows"]');
+        filterTable.innerHTML += "<tr>" + newFilterRow + "</tr>";*/
+
+
+
     }
 
     // a function that accepts a text string called str & 2 more strings called startStr & endStr
@@ -519,7 +546,6 @@ export default class AndeeWorkbench extends LightningElement {
             var whereFields = this.template.querySelector('[data-id="QB_filter_field_'+i+'"]')
             var whereOper = this.template.querySelector('[data-id="QB_filter_compOper_'+i+'"]')
             if (whereFields && whereOper) {
-
                 
                 console.log('Inside IF clause at ' + Date.now() + ' (elapsed ' + (Date.now() - startTime) + 'ms)');
 
@@ -528,17 +554,34 @@ export default class AndeeWorkbench extends LightningElement {
                 
 
                 var whereOperValue = whereOper.options[whereOper.selectedIndex].value;
+                var whereOperValue2 = whereOperValue;
+                if(whereOperValue == 'starts' || whereOperValue == 'ends' || whereOperValue == 'contains'){
+                    whereOperValue2 = 'LIKE';
+                } 
                 console.log('after whereOperValue ' + whereOperValue + ' - ' + Date.now() + ' (elapsed ' + (Date.now() - startTime) + 'ms)');
                 
                 if (whereFieldValue != '') {
-                    this.whereClause = whereFieldValue + ' ' + whereOperValue;
+
+                    if (this.whereClause != '') {
+                        this.whereClause += ' AND ';
+                    }
+                    
+                    this.whereClause += whereFieldValue + ' ' + whereOperValue2;
                     if(this.template.querySelector('[data-id="QB_filter_value_'+i+'"]').value == 'null'){
                         this.whereClause += ' ' + this.template.querySelector('[data-id="QB_filter_value_'+i+'"]').value;
                     } else {
                         if(this.fieldArray[whereFieldValue.toLowerCase()].Type == 'BOOLEAN' || this.fieldArray[whereFieldValue.toLowerCase()].Type == 'DATE' || this.fieldArray[whereFieldValue.toLowerCase()].Type == 'DATETIME' || this.fieldArray[whereFieldValue.toLowerCase()].Type == 'Double'){
                             this.whereClause += ' ' + this.template.querySelector('[data-id="QB_filter_value_'+i+'"]').value;
                         } else {
-                            this.whereClause += ' \'' + this.template.querySelector('[data-id="QB_filter_value_'+i+'"]').value + '\'';
+                            if (whereOperValue == 'starts'){
+                                this.whereClause += ' \'' + this.template.querySelector('[data-id="QB_filter_value_'+i+'"]').value + '%\'';
+                            } else if (whereOperValue == 'ends'){
+                                this.whereClause += ' \'%' + this.template.querySelector('[data-id="QB_filter_value_'+i+'"]').value + '\'';
+                            } else if (whereOperValue == 'contains'){
+                                this.whereClause += ' \'%' + this.template.querySelector('[data-id="QB_filter_value_'+i+'"]').value + '%\'';
+                            } else {
+                                this.whereClause += ' \'' + this.template.querySelector('[data-id="QB_filter_value_'+i+'"]').value + '\'';
+                            }
                         }
                     }
                     console.log('after concatenating whereClause ' + Date.now() + ' (elapsed ' + (Date.now() - startTime) + 'ms)');
@@ -612,7 +655,7 @@ export default class AndeeWorkbench extends LightningElement {
         
         })
         .catch(error => {
-            this.error = error;
+            this.error = error.body.message;
             console.error('error (displaySingleRow) => ', error); // error handling
             this.isLoading = false;
         })
@@ -626,24 +669,39 @@ export default class AndeeWorkbench extends LightningElement {
 
         if(this.isUpdateView){
 
+            // Get all the document elements with the name of 'updateField' and loop through them
+            // For each element, get the value and add it to the rowData array
+            var updateFields = this.template.querySelectorAll('[data-id="updateField"]');
+            for (var i = 0; i < updateFields.length; i++) {
+                var updateField = updateFields[i];
+                var updateFieldName = updateField.dataset.fieldname;
+                var updateFieldValue = updateField.value;
+                // loop through rowData array & find element where the property name is the same as the updateFieldName
+                for(var j=0; j<this.rowData.length; j++){
+                    if(this.rowData[j].Name == updateFieldName){
+                       this.rowData[j].Value = updateFieldValue;
+                       break;
+                    }                    
+                }
+
+            }
+
             //create a variable called parm which has 2 properties called ObjectApiName & Fields
             // Set these properties to have the values of this.selectedSingleRecordObject & this.rowData respectively
-            var parm = {};
-                       
-            parm.ObjectApiName = this.selectedSingleRecordObject;
-            parm.Fields = this.rowData;
+            var parm = {
+                ObjectApiName : this.selectedSingleRecordObject,
+                Fields : this.rowData
+            };
 
-            console.log('this.rowData: ' + this.rowData);
-            console.dir(parm);
+            const parmJson = JSON.stringify(parm);
 
-
-            updateSingleEntryData({querySingleRowWrapper : parm})
+            updateSingleEntryData({querySingleRowJson : parmJson})
             .then(data => {
                 this.error = undefined;
             
             })
             .catch(error => {
-                this.error = error;
+                this.error = error.body.message;
                 console.error('error (updateView) => ', error); // error handling
             })
 
