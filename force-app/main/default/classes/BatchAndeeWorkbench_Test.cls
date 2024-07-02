@@ -3,8 +3,8 @@
  * @date 01-Jul-2024
  * @author Andee Weir
  * @description Implementation of Workbench test class
- * @modifications 
- *     01-Jul-2024 Andee Weir : Initial version
+ * @modifications  
+ * 01-Jul-2024 Andee Weir             CDSME-xxxxx : Initial implementation
  */
 @isTest
 private class BatchAndeeWorkbench_Test {
@@ -39,11 +39,11 @@ private class BatchAndeeWorkbench_Test {
     @isTest
     static void testSubmitQueryBatch() {
         // First, submit a batch job
-        List<String> fields = new List<String>{'Id', 'Name'};
+        List<String> fields = new List<String>{'Id', 'Name', 'Account.Name', 'Account.Parent.Name'};
         
         Test.startTest();
             BatchAndeeWorkbench.BatchJobResult result = BatchAndeeWorkbench.SubmitQueryBatch(
-                'Account', 
+                'Contact', 
                 fields, 
                 '', 
                 'Name ASC', 
