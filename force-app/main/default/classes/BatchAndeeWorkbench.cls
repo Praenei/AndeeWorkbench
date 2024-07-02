@@ -89,7 +89,12 @@ public with sharing class BatchAndeeWorkbench implements Database.Batchable<sObj
                     if(fileRow != ''){
                         fileRow += '\t';
                     }
-                    string fieldType = GetFieldType(relatedObj.getSObjectType().getDescribe().getName(), fieldName);
+                    string fieldType = '';
+                    try{
+                        fieldType = GetFieldType(relatedObj.getSObjectType().getDescribe().getName(), fieldName);
+                    } catch (Exception e){
+                        fieldType = 'STRING';  // To handle things like Parent i.e. not an object
+                    }
                     fileRow += (fieldValue==null)?'':FormatFieldValue(fieldValue, fieldType);
                 } else {
                     if(fileRow != ''){
