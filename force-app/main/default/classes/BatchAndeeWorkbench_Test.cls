@@ -1,6 +1,20 @@
+/**
+ * (c) Invesco 2024, all rights reserved
+ * @date 01-Jul-2024
+ * @author Andee Weir
+ * @description Implementation of Workbench test class
+ * @modifications 
+ *     01-Jul-2024 Andee Weir : Initial version
+ */
 @isTest
 private class BatchAndeeWorkbench_Test {
     
+    /**
+     * @method setupTestData
+     * @description Sets up test data for the test methods
+     * @param None
+     * @return void
+     */
     @TestSetup
     static void setupTestData() {
         List<Account> accounts = new List<Account>();
@@ -16,6 +30,12 @@ private class BatchAndeeWorkbench_Test {
         insert contacts;
     }
     
+    /**
+     * @method testSubmitQueryBatch
+     * @description Tests the SubmitQueryBatch and GetBatchJobStatus methods of BatchAndeeWorkbench
+     * @param None
+     * @return void
+     */
     @isTest
     static void testSubmitQueryBatch() {
         // First, submit a batch job
@@ -36,7 +56,6 @@ private class BatchAndeeWorkbench_Test {
         System.assertNotEquals(null, jobStatus, 'Job status should not be null');
         System.assertEquals(result.jobId, jobStatus.Id, 'Job ID should match');
         System.assertNotEquals(null, jobStatus.Status, 'Job status should not be null');
-
         // Hard to check as not reliably able to delay the job
         /*System.assertEquals('Completed', jobStatus.Status, 'Job should be completed');
         System.assertEquals(0, jobStatus.NumberOfErrors, 'There should be no errors');
