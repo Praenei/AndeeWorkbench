@@ -1,3 +1,11 @@
+/**
+(c) Invesco 2024, all rights reserved
+@date 01-Jul-2024      
+@author Andee Weir
+@description Implementation of Workbench for batch processing of large data sets
+@modifications  
+01-Jul-2024 Andee Weir             CDSME-xxxxx : Initial implementation
+*/
 public with sharing class BatchAndeeWorkbench implements Database.Batchable<sObject>, Database.Stateful {
 
     private String query;
@@ -5,6 +13,15 @@ public with sharing class BatchAndeeWorkbench implements Database.Batchable<sObj
     private id contentVersionId;
     private integer batchNumber = 0;
 
+    /**
+     * @description Constructor for BatchAndeeWorkbench
+     * @param objectApiName The API name of the object to query
+     * @param fields List of fields to include in the query
+     * @param whereClause WHERE clause for the query
+     * @param sortOrder ORDER BY clause for the query
+     * @param limitCount LIMIT clause for the query
+     * @param allRows Whether to include deleted records
+     */
     public BatchAndeeWorkbench(String objectApiName, list<string> fields, string whereClause, string sortOrder, string limitCount, boolean allRows) {
         this.query = constructQuery(objectApiName, fields, whereClause, sortOrder, limitCount, allRows);
         this.fields = fields;
@@ -18,19 +35,28 @@ public with sharing class BatchAndeeWorkbench implements Database.Batchable<sObj
         insert cv;
         this.contentVersionId = cv.Id;
 
-        // delete any contentVersions which are older that 30 days & have a pathOnClient starting with 'workBench/'
+        // Delete any contentVersions which are older that 30 days & have a pathOnClient starting with 'workBench/'
         list<id> cdIds = new list<id>();
-        for(contentVersion c : [select id, contentdocumentId from ContentVersion where Title like 'QueryResults %' and createdDate < :Datetime.now().addDays(-30) and PathOnClient like 'workBench/%']){
+        for(contentVersion c : [SELECT id, contentdocumentId FROM ContentVersion WHERE Title LIKE 'QueryResults %' AND createdDate < :Datetime.now().addDays(-30) AND PathOnClient LIKE 'workBench/%']){
             cdIds.add(c.contentdocumentId);
         }
-        delete [select id from ContentDocument where id in :cdIds];
-
-
+        delete [SELECT id FROM ContentDocument WHERE id IN :cdIds];
     }
+
+    /**
+     * @description Start method for the batch process
+     * @param bc The BatchableContext
+     * @return Database.QueryLocator The query locator for the batch process
+     */
     public Database.QueryLocator start(Database.BatchableContext bc) {
         return Database.getQueryLocator(query);
     }
 
+    /**
+     * @description Execute method for the batch process
+     * @param bc The BatchableContext
+     * @param scope The list of sObjects to process in this batch
+     */
     public void execute(Database.BatchableContext bc, List<sObject> scope) {
         String fileRow = '';
         string csvOutput = '';
@@ -60,7 +86,6 @@ public with sharing class BatchAndeeWorkbench implements Database.Batchable<sObj
                     }
                     fileRow += (fieldValue==null)?'':String.valueOf(fieldValue);
                 } else {
-
                     if(fileRow != ''){
                         fileRow += '\t';
                     }
@@ -71,58 +96,81 @@ public with sharing class BatchAndeeWorkbench implements Database.Batchable<sObj
             csvOutput += fileRow + '\n';
         }
 
-        ContentVersion cv = [select id, VersionData from ContentVersion where id = :contentVersionId];
+        ContentVersion cv = [SELECT id, VersionData FROM ContentVersion WHERE id = :contentVersionId];
         String existingData = cv.VersionData.toString();
         cv.VersionData = Blob.valueOf(existingData + csvOutput);
         update cv;
     }
 
+    /**
+     * @description Finish method for the batch process
+     * @param bc The BatchableContext
+     */
     public void finish(Database.BatchableContext bc) {
         // Do something when the batch finishes
     }
 
+    /**
+     * @description Submit a query for batch processing
+     * @param objectApiName The API name of the object to query
+     * @param fields List of fields to include in the query
+     * @param whereClause WHERE clause for the query
+     * @param sortOrder ORDER BY clause for the query
+     * @param limitCount LIMIT clause for the query
+     * @param allRows Whether to include deleted records
+     * @return BatchJobResult The result of the batch job submission
+     */
     @AuraEnabled
     public static BatchJobResult SubmitQueryBatch(String objectApiName, list<string> fields, string whereClause, string sortOrder, string limitCount, boolean allRows){
-        BatchAndeeWorkbench job = new BatchAndeeWorkbench( objectApiName, fields,  whereClause,  sortOrder,  limitCount,  allRows);
-        id jobId =  Database.executeBatch(job, 1);
+        BatchAndeeWorkbench job = new BatchAndeeWorkbench(objectApiName, fields, whereClause, sortOrder, limitCount, allRows);
+        id jobId = Database.executeBatch(job, 1);
 
         system.debug('Andee: ' + jobId + ' ' + job.contentVersionId);
 
         return new BatchJobResult(jobId, job.contentVersionId);
     }
 
+    /**
+     * @description Get the status of a batch job
+     * @param jobId The ID of the batch job
+     * @return AsyncApexJob The status of the batch job
+     */
     @AuraEnabled
     public static AsyncApexJob GetBatchJobStatus(Id jobId){
         return [SELECT Id, Status, NumberOfErrors, JobItemsProcessed, TotalJobItems FROM AsyncApexJob WHERE Id = :jobId];
     }
 
-    
-
-
+    /**
+     * @description Construct a SOQL query string
+     * @param objectApiName The API name of the object to query
+     * @param fields List of fields to include in the query
+     * @param whereClause WHERE clause for the query
+     * @param sortOrder ORDER BY clause for the query
+     * @param limitCount LIMIT clause for the query
+     * @param allRows Whether to include deleted records
+     * @return String The constructed SOQL query
+     */
     private static string constructQuery(String objectApiName, list<string> fields, string whereClause, string sortOrder, string limitCount, boolean allRows) {
-
-
         // Build the query string
         String query = 'SELECT ' + String.join(fields, ', ') + ' FROM ' + objectApiName;
-        if(whereClause != null && whereClause!=''){
+        if(whereClause != null && whereClause != ''){
             query += ' WHERE ' + whereClause;
-        
         }
-        if(sortOrder!=null && sortOrder!=''){
+        if(sortOrder != null && sortOrder != ''){
             query += ' ORDER BY ' + sortOrder;
-        
         } 
-        if(limitCount!=null && limitCount!=''){
+        if(limitCount != null && limitCount != ''){
             query += ' LIMIT ' + limitCount;
         }
-        
         if(allRows != null && allRows){
             query += ' ALL ROWS ';
         }
-
         return query;
     }
 
+    /**
+     * @description Inner class to represent the result of a batch job submission
+     */
     public class BatchJobResult {
         @AuraEnabled
         public Id jobId;
@@ -130,6 +178,11 @@ public with sharing class BatchAndeeWorkbench implements Database.Batchable<sObj
         @AuraEnabled
         public Id contentVersionId;
 
+        /**
+         * @description Constructor for BatchJobResult
+         * @param jobId The ID of the batch job
+         * @param contentVersionId The ID of the ContentVersion created for the job
+         */
         public BatchJobResult(Id jobId, Id contentVersionId) {
             this.jobId = jobId;
             this.contentVersionId = contentVersionId;
