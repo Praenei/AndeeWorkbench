@@ -7,7 +7,7 @@
 01-Jul-2024 Andee Weir             WORKBENCH-002 : Initial implementation of test class
 */
 @isTest
-private class AndeeWorkbenchControllerTest {
+private class AndeeWorkbenchController_Test {
     
     /**
      * @description Sets up test data for the test methods
