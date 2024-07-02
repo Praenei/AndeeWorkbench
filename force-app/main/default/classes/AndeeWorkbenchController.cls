@@ -141,16 +141,23 @@ public with sharing class AndeeWorkbenchController {
     }
 
     private static String getFieldType(string objectName, String fieldName){
+
+        system.debug('getFieldType: ' + objectName + '.' + fieldName);
+
         if(fieldTypeMap.containsKey(objectName + '.' + fieldName)){
             return fieldTypeMap.get(objectName + '.' + fieldName);
         } else {
-            Schema.SObjectType targetType = Schema.getGlobalDescribe().get(objectName);
-            Schema.DescribeSObjectResult targetDesc = targetType.getDescribe();
-            Map<String, Schema.SObjectField> fieldMap = targetDesc.fields.getMap();
-            Schema.SObjectField field = fieldMap.get(fieldName);
-            Schema.DescribeFieldResult fieldDesc = field.getDescribe();
-            fieldTypeMap.put(objectName + '.' + fieldName, fieldDesc.getType().name());
-            return fieldDesc.getType().name();
+            try {
+                Schema.SObjectType targetType = Schema.getGlobalDescribe().get(objectName);
+                Schema.DescribeSObjectResult targetDesc = targetType.getDescribe();
+                Map<String, Schema.SObjectField> fieldMap = targetDesc.fields.getMap();
+                Schema.SObjectField field = fieldMap.get(fieldName);
+                Schema.DescribeFieldResult fieldDesc = field.getDescribe();
+                fieldTypeMap.put(objectName + '.' + fieldName, fieldDesc.getType().name());
+                return fieldDesc.getType().name();
+            } catch (Exception e){ // handling (badly) things like Parent.Name on account when Parent is not an object.
+                return 'string';
+            }
         }
     }
 
@@ -279,6 +286,8 @@ public with sharing class AndeeWorkbenchController {
             query += ' ALL ROWS ';
         }
 
+        system.debug('query: ' + query);
+
         return query;
     }
 
@@ -315,7 +324,10 @@ public with sharing class AndeeWorkbenchController {
     
     
     @AuraEnabled
-    public static void  UpdateSingleEntryData(QuerySingleRowWrapper querySingleRowWrapper) {
+    public static void  UpdateSingleEntryData(String querySingleRowJson) {
+
+        // convert the JSON string to a QuerySingleRowWrapper object    
+        QuerySingleRowWrapper querySingleRowWrapper = (QuerySingleRowWrapper)JSON.deserialize(querySingleRowJson, QuerySingleRowWrapper.class);
 
         system.debug(querySingleRowWrapper);
 
@@ -336,11 +348,22 @@ public with sharing class AndeeWorkbenchController {
 
         // loop through the fields in querySingleRowWrapper.Fields and set the values on the object
         for(FieldWrapper field : objFields){
-            if(field.Updatable || field.Name == 'Id'){
-                obj.put(field.Name, field.Value);
-            }
-            if(field.Value != field.OriginalValue){
-                hasFieldValueChanged = true;
+            if(field.Value != field.OriginalValue || field.Name == 'Id'){
+
+                if(field.Value != field.OriginalValue){
+                    hasFieldValueChanged = true;
+                }
+
+                if(field.Type == 'BOOLEAN'){
+                    obj.put(field.Name, field.Value == 'true');
+                } else if(field.Type == 'DATE'){
+                    obj.put(field.Name, Date.valueOf(field.Value));
+                } else if(field.Type == 'DATETIME'){
+                    string newDateTime = field.Value.replace('T', ' ').replace('Z', '');
+                    obj.put(field.Name, DateTime.valueOf(newDateTime));
+                } else {
+                    obj.put(field.Name, String.valueOf(field.Value));
+                }
             }
         }
 
