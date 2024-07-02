@@ -123,7 +123,7 @@ public with sharing class BatchAndeeWorkbench implements Database.Batchable<sObj
     @AuraEnabled
     public static BatchJobResult SubmitQueryBatch(String objectApiName, list<string> fields, string whereClause, string sortOrder, string limitCount, boolean allRows){
         BatchAndeeWorkbench job = new BatchAndeeWorkbench(objectApiName, fields, whereClause, sortOrder, limitCount, allRows);
-        id jobId = Database.executeBatch(job, 1);
+        id jobId = Database.executeBatch(job, 200);
 
         system.debug('Andee: ' + jobId + ' ' + job.contentVersionId);
 
