@@ -1,13 +1,28 @@
+/**
+(c) Invesco 2024, all rights reserve
+@date 01-Jul-2024      
+@author Andee Weir
+@description Implementation of Workbench
+@modifications  
+dd-Mmm-yyyy AuthorName             JIRA-ID : Description 
+*/
 public with sharing class AndeeWorkbenchController {
 
     private static map<string, string> fieldTypeMap = new map<string, string>();
 
-
+    /* @method: GetOrgDomainUrl
+     * @description:  Get the Org Domain URL
+     * @return : string : Url
+    */   
     @AuraEnabled(cacheable=true)
     public static string GetOrgDomainUrl(){
         return System.Url.getOrgDomainUrl().toExternalForm();
     }
     
+    /* @method: GetAllObjects
+     * @description:  Get a sorted list of all objects in the org
+     * @return : list<string> sorted list of API object names
+    */
     @AuraEnabled(cacheable=true)
     public static list<string> GetAllObjects() {
 
@@ -24,6 +39,11 @@ public with sharing class AndeeWorkbenchController {
     }
 
 
+    /* @method: GetFieldsForObject
+     * @description:  Get field details for the supplied object api name
+     * @param : string objectName : API object name 
+     * @return : list<FieldWrapper> : list of field key details for the object
+    */ 
     @AuraEnabled
     public static list<FieldWrapper>  GetFieldsForObject(string objectName) {
 
@@ -76,7 +96,16 @@ public with sharing class AndeeWorkbenchController {
     }
     
 
-
+    /* @method: SubmitQuery
+     * @description:  Run a dynamic SOQL & return results
+     * @param : String objectApiName : API object name 
+     * @param : list<string> fields : list of field names which data should be retrieved for 
+     * @param : string whereClause : the SOQL where clause 
+     * @param : string sortOrder : the SOQL Order By clause 
+     * @param : string limitCount : the SOQL Limit  
+     * @param : boolean allRows : if to include deleted/archived rows or not 
+     * @return : list<ResultWrapper> : the returned data.  Includes the rowid & then a list of name/value pairs
+    */ 
     @AuraEnabled
     public static List<ResultWrapper> SubmitQuery(String objectApiName, list<string> fields, string whereClause, string sortOrder, string limitCount, boolean allRows) {
 
@@ -139,7 +168,14 @@ public with sharing class AndeeWorkbenchController {
 
         return results;
     }
+    
 
+    /* @method: getFieldType
+     * @description:  Run a dynamic SOQL & return results
+     * @param : String objectName : API object name  
+     * @param : string fieldName : API field name 
+     * @return : string : the type of the field e.g. String, DateTime, Boolean, etc
+    */
     private static String getFieldType(string objectName, String fieldName){
 
         system.debug('getFieldType: ' + objectName + '.' + fieldName);
@@ -160,7 +196,14 @@ public with sharing class AndeeWorkbenchController {
             }
         }
     }
+    
 
+    /* @method: FormatFieldValue
+     * @description:  Correct foramt a field's value depending on the field's type
+     * @param : String objectName : API object name  
+     * @param : string fieldName : API field name 
+     * @return : string : the type of the field e.g. String, DateTime, Boolean, etc
+    */
     private static string FormatFieldValue(Object fieldValue, string fieldType){
         if(fieldValue == null){
             return '';
@@ -183,8 +226,18 @@ public with sharing class AndeeWorkbenchController {
             return String.valueOf(fieldValue);
         }
     }
+    
 
-
+    /* @method: SubmitQueryTsv
+     * @description: Submit a SOQL query that produces a TSV extract
+     * @param : String objectApiName : API object name 
+     * @param : list<string> fields : list of field names which data should be retrieved for 
+     * @param : string whereClause : the SOQL where clause 
+     * @param : string sortOrder : the SOQL Order By clause 
+     * @param : string limitCount : the SOQL Limit  
+     * @param : boolean allRows : if to include deleted/archived rows or not  
+     * @return : id : the id of the ContentVersion record containing the output
+    */
     @AuraEnabled
     public static Id SubmitQueryTsv(String objectApiName, list<string> fields, string whereClause, string sortOrder, string limitCount, boolean allRows) {
 
@@ -245,10 +298,18 @@ public with sharing class AndeeWorkbenchController {
         return cv.Id;
 
     }
-
     
-
-
+    
+    /* @method: SubmitQueryCount
+     * @description: Submit a SOQL query that returns a count of the number of rows which would be returned
+     * @param : String objectApiName : API object name 
+     * @param : list<string> fields : list of field names which data should be retrieved for 
+     * @param : string whereClause : the SOQL where clause 
+     * @param : string sortOrder : the SOQL Order By clause 
+     * @param : string limitCount : the SOQL Limit  
+     * @param : boolean allRows : if to include deleted/archived rows or not  
+     * @return : integer : the count of the number of rows 
+    */
     @AuraEnabled
     public static Integer SubmitQueryCount(String objectApiName, string whereClause, boolean allRows) {
 
@@ -263,8 +324,18 @@ public with sharing class AndeeWorkbenchController {
         return (Integer)queryResults[0].get('expr0');
 
     }
-
-
+    
+    
+    /* @method: constructQuery
+     * @description: create a SOQL query based on the supplied params
+     * @param : String objectApiName : API object name 
+     * @param : list<string> fields : list of field names which data should be retrieved for 
+     * @param : string whereClause : the SOQL where clause 
+     * @param : string sortOrder : the SOQL Order By clause 
+     * @param : string limitCount : the SOQL Limit  
+     * @param : boolean allRows : if to include deleted/archived rows or not  
+     * @return : string : SOQL statement
+    */
     public static string constructQuery(String objectApiName, list<string> fields, string whereClause, string sortOrder, string limitCount, boolean allRows) {
 
 
@@ -290,8 +361,13 @@ public with sharing class AndeeWorkbenchController {
 
         return query;
     }
-
-
+    
+    
+    /* @method: GetSingleEntryData
+     * @description: Return the data for all accessible fields in a single row
+     * @param : id selectedId : the id of the row for which the data should be returned 
+     * @return : QuerySingleRowWrapper : Object API name + field data returned in name/value pairs 
+    */
     @AuraEnabled
     public static QuerySingleRowWrapper  GetSingleEntryData(id selectedId) {
         
@@ -323,6 +399,10 @@ public with sharing class AndeeWorkbenchController {
     }
     
     
+    /* @method: UpdateSingleEntryData
+     * @description: Update the data in a single entry
+     * @param : String querySingleRowJson : the jsom containing the data to update.  Could not pass object in!!!!
+    */
     @AuraEnabled
     public static void  UpdateSingleEntryData(String querySingleRowJson) {
 
