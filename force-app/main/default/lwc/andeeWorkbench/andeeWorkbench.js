@@ -6,6 +6,7 @@ import getFieldsForObject from '@salesforce/apex/AndeeWorkbenchController.GetFie
 import submitQuery from '@salesforce/apex/AndeeWorkbenchController.SubmitQuery';
 import submitQueryTsv from '@salesforce/apex/AndeeWorkbenchController.SubmitQueryTsv';
 import submitQueryBatch from '@salesforce/apex/BatchAndeeWorkbench.SubmitQueryBatch';
+import submitQueryCount from '@salesforce/apex/AndeeWorkbenchController.SubmitQueryCount';
 import getBatchJobStatus from '@salesforce/apex/BatchAndeeWorkbench.GetBatchJobStatus';
 import getOrgDomainUrl from '@salesforce/apex/AndeeWorkbenchController.GetOrgDomainUrl';
 import getSingleEntryData from '@salesforce/apex/AndeeWorkbenchController.GetSingleEntryData';
@@ -45,7 +46,6 @@ export default class AndeeWorkbench extends LightningElement {
     limit = "200";
 
     orgDomainUrl = "";
-    count = false;
 
     chainOfSingleRowIds = [];
 
@@ -171,22 +171,23 @@ export default class AndeeWorkbench extends LightningElement {
         console.log(limit);
 
         console.log('All rows :' + this.template.querySelector('[data-id="excludeDeleted"]').checked);
-        
-        if(this.count) {
+
+        if(fields.length == 1 && fields[0].toLowerCase == 'count()'){
+
+            console.log('Performing count query');
+
             // If count is true, submit a count query
-            submitQueryCount({objectApiName : this.objectValue,
-                whereClause : whereClause,
+            submitQuery({objectApiName : this.objectValue,
+                fields : fields,
+                whereClause : whereClause, 
+                sortOrder : sortOrder, 
+                limitCount : limit,
                 allRows : this.template.querySelector('[data-id="excludeDeleted"]').checked})
                 .then(data => {
                     // Process count query results
                     this.queryResults = [];
-                    this.queryHeadings = ['Count'];
-                    fields.Value = data;
-                    fields.Linkable = false;
-                    this.queryResults[0] = {};
-                    this.queryResults[0].RowId = 'dummy';
-                    this.queryResults[0].Fields = [];
-                    this.queryResults[0].Fields.push(fields);
+                    this.queryHeadings = ['Count()'];
+                    this.queryResults = data;
               
                     this.isLoading = false;
                     this.error = undefined;
@@ -198,6 +199,9 @@ export default class AndeeWorkbench extends LightningElement {
                 this.isLoading = false;
             })
         } else {
+
+            console.log('Performing regular query');
+
             // Submit a regular SOQL query
             submitQuery({objectApiName : this.objectValue,
                 fields : fields,
@@ -305,7 +309,7 @@ export default class AndeeWorkbench extends LightningElement {
             fields.Value = 'Download';
             fields.Linkable = true;
             fields.IsDownloadLink = true;
-            fields.HRef = this.orgDomainUrl + '/lightning/r/ContentDocument/'+data+'/view';
+            fields.HRef = this.orgDomainUrl + '/sfc/servlet.shepherd/version/download/'+data+'?operationContext=S1';
             this.queryResults[0] = {};
             this.queryResults[0].RowId = 'dummy';
             this.queryResults[0].Fields = [];
@@ -376,7 +380,7 @@ export default class AndeeWorkbench extends LightningElement {
             console.log('Result from batch job :');
             console.dir(result);
             this.batchJobId = result.jobId;
-            this.contentVersionUrl = this.orgDomainUrl + '/' + result.contentVersionId;      
+            this.contentVersionUrl = this.orgDomainUrl + '/sfc/servlet.shepherd/version/download/'+result.contentVersionId+'?operationContext=S1';;      
             this.isLoading = false;
             this.error = undefined;
             this.monitorJobProgress();
@@ -473,7 +477,6 @@ export default class AndeeWorkbench extends LightningElement {
 
     fieldChanged(event){
         this.isLoading = true;
-        this.count = false;
         var fields = this.template.querySelector('[data-id="fieldSelect"]')
 
         var selectedFields = Array.from(fields.selectedOptions).map(option => option.value);
@@ -485,10 +488,7 @@ export default class AndeeWorkbench extends LightningElement {
                 }
                 selectedFields = [];
                 selectedFields = [ ...selectedFields, 'count()' ];
-                this.count = true;
             } 
-        } else if(selectedFields.length == 1 && selectedFields[0] == 'count()'){
-            this.count = true;
         } 
 
         this.fields=selectedFields;

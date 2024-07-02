@@ -113,7 +113,34 @@ public with sharing class AndeeWorkbenchController {
 
         boolean idAutoAdded = false;
 
-        if(!fields.contains('Id')){
+        // handle if count() is in the fields
+        if(fields.size() == 1 && fields[0].toLowerCase() == 'count()'){
+
+            FieldData fw = new FieldData();
+            fw.Name = 'count()';
+            fw.Value = String.valueOf(SubmitQueryCount(objectApiName, whereClause, allRows));
+            fw.Linkable = false;
+
+
+            ResultWrapper rw = new ResultWrapper();
+            rw.RowId = '0';
+            rw.Fields = new List<FieldData>();
+            rw.Fields.add(fw);
+
+            results.add(rw);
+            return results;
+        }
+
+        boolean idExists = false;
+        // Add Id to the fields if it is not already there
+        for(integer i=0; i<fields.size(); i++){
+            if(fields[i].toLowerCase() == 'id'){
+                idExists = true;
+                break;
+            }
+        }
+
+        if(!idExists){  
             fields.add('Id');
             idAutoAdded = true;
         }
@@ -401,7 +428,7 @@ public with sharing class AndeeWorkbenchController {
     
     /* @method: UpdateSingleEntryData
      * @description: Update the data in a single entry
-     * @param : String querySingleRowJson : the jsom containing the data to update.  Could not pass object in!!!!
+     * @param : String querySingleRowJson : the json containing the data to update.  Could not pass object in!!!!
     */
     @AuraEnabled
     public static void  UpdateSingleEntryData(String querySingleRowJson) {
