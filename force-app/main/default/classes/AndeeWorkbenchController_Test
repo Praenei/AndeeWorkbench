@@ -1,6 +1,17 @@
+/**
+(c) Invesco 2024, all rights reserved
+@date 01-Jul-2024      
+@author Andee Weir
+@description Test class for AndeeWorkbenchController
+@modifications  
+01-Jul-2024 Andee Weir             WORKBENCH-002 : Initial implementation of test class
+*/
 @isTest
 private class AndeeWorkbenchControllerTest {
     
+    /**
+     * @description Sets up test data for the test methods
+     */
     @TestSetup
     static void setupTestData() {
         // Create parent account
@@ -26,12 +37,18 @@ private class AndeeWorkbenchControllerTest {
         insert contacts;
     }
     
+    /**
+     * @description Tests the GetOrgDomainUrl method
+     */
     @isTest
     static void testGetOrgDomainUrl() {
         String url = AndeeWorkbenchController.GetOrgDomainUrl();
         System.assertNotEquals(null, url, 'Org domain URL should not be null');
     }
     
+    /**
+     * @description Tests the GetAllObjects method
+     */
     @isTest
     static void testGetAllObjects() {
         List<String> objects = AndeeWorkbenchController.GetAllObjects();
@@ -39,6 +56,9 @@ private class AndeeWorkbenchControllerTest {
         System.assert(objects.contains('Contact'), 'Contact should be in the list of objects');
     }
     
+    /**
+     * @description Tests the GetFieldsForObject method
+     */
     @isTest
     static void testGetFieldsForObject() {
         List<AndeeWorkbenchController.FieldWrapper> fields = AndeeWorkbenchController.GetFieldsForObject('Account');
@@ -54,6 +74,9 @@ private class AndeeWorkbenchControllerTest {
         System.assert(hasNameField, 'Account should have a Name field');
     }
     
+    /**
+     * @description Tests the SubmitQuery method
+     */
     @isTest
     static void testSubmitQuery() {
         List<String> fields = new List<String>{'Id', 'Name', 'Industry', 'Parent.Name'};
@@ -71,6 +94,9 @@ private class AndeeWorkbenchControllerTest {
         System.assertEquals('Parent Account', results[0].Fields[3].Value, 'The parent account name should be Parent Account');
     }
     
+    /**
+     * @description Tests the SubmitQueryTsv method
+     */
     @isTest
     static void testSubmitQueryTsv() {
         List<String> fields = new List<String>{'Id', 'FirstName', 'LastName', 'Email', 'Account.Name', 'Account.Parent.Name'};
@@ -91,12 +117,18 @@ private class AndeeWorkbenchControllerTest {
         System.assert(csvContent.contains('Jane\tSmith'), 'CSV should contain Jane Smith');
     }
     
+    /**
+     * @description Tests the SubmitQueryCount method
+     */
     @isTest
     static void testSubmitQueryCount() {
         Integer count = AndeeWorkbenchController.SubmitQueryCount('Account', 'Industry = \'Finance\'', false);
         System.assertEquals(1, count, 'There should be one account with Finance industry');
     }
     
+    /**
+     * @description Tests the GetSingleEntryData method
+     */
     @isTest
     static void testGetSingleEntryData() {
         Account acc = [SELECT Id FROM Account WHERE Name = 'Child Account' LIMIT 1];
@@ -115,6 +147,9 @@ private class AndeeWorkbenchControllerTest {
         System.assert(hasNameField, 'The result should contain the Name field with value Child Account');
     }
     
+    /**
+     * @description Tests the UpdateSingleEntryData method
+     */
     @isTest
     static void testUpdateSingleEntryData() {
         Account acc = [SELECT Id, Name, Industry FROM Account WHERE Name = 'Child Account' LIMIT 1];
