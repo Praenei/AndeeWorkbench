@@ -177,4 +177,45 @@ private class AndeeWorkbenchController_Test {
         Account updatedAcc = [SELECT Industry FROM Account WHERE Id = :acc.Id];
         System.assertEquals('Healthcare', updatedAcc.Industry, 'The account industry should be updated to Healthcare');
     }
+    
+    /**
+     * @description Tests the InsertSingleEntryData method
+     */
+    @isTest
+    static void testInsertSingleEntryData() {
+        
+        AndeeWorkbenchController.QuerySingleRowWrapper wrapper = new AndeeWorkbenchController.QuerySingleRowWrapper();
+        wrapper.ObjectApiName = 'Account';
+        wrapper.Fields = new List<AndeeWorkbenchController.FieldWrapper>{
+            new AndeeWorkbenchController.FieldWrapper(),
+            new AndeeWorkbenchController.FieldWrapper()
+        };
+        wrapper.Fields[0].Name = 'Name';
+        wrapper.Fields[0].Value = 'New Account';
+        wrapper.Fields[0].Type = 'STRING';
+        wrapper.Fields[1].Name = 'Industry';
+        wrapper.Fields[1].Value = 'Healthcare';
+        wrapper.Fields[1].Type = 'STRING';
+        
+        String wrapperJson = JSON.serialize(wrapper);
+        
+        Test.startTest();
+        Id newId = AndeeWorkbenchController.InsertSingleEntryData(wrapperJson);
+        Test.stopTest();
+        
+        Account newAcc = [SELECT Id, Name, Industry FROM Account WHERE Id = :newId];
+        System.assertEquals('New Account', newAcc.Name);
+        System.assertEquals('Healthcare', newAcc.Industry);
+    }    
+    
+    /**
+     * @description Tests the DeleteEntry method
+     */
+    @isTest
+    static void testDeleteEntry() {
+        Account acc = [SELECT Id, Name, Industry FROM Account WHERE Name = 'Child Account' LIMIT 1];
+        AndeeWorkbenchController.DeleteEntry(acc.Id);
+        list<Account> resultAccs = [SELECT Id, Name, Industry FROM Account WHERE Name = 'Child Account'];
+        system.assertEquals(0,resultAccs.size());
+    }
 }
