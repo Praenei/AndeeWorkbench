@@ -67,6 +67,7 @@ public with sharing class AndeeWorkbenchController {
                 fw.Groupable = fieldResult.isGroupable();
                 fw.Updatable = fieldResult.isUpdateable();
                 fw.Linkable = (fw.Type=='Id' || fw.Type=='REFERENCE')?true:false;
+                fw.Value = '';
                 fieldsMap.put(fw.Name, fw);
                 fieldNames.add(fieldResult.getName()); 
             } 
@@ -456,7 +457,7 @@ public with sharing class AndeeWorkbenchController {
         // loop through the fields in querySingleRowWrapper.Fields and set the values on the object
         for(FieldWrapper field : objFields){
             if(field.Value != field.OriginalValue || field.Name == 'Id'){
-
+                system.debug(field.Name + ' : ' + field.Type + ' : ' + field.Value + ' : ' + field.OriginalValue);
                 if(field.Value != field.OriginalValue){
                     hasFieldValueChanged = true;
                 }
@@ -468,6 +469,12 @@ public with sharing class AndeeWorkbenchController {
                 } else if(field.Type == 'DATETIME'){
                     string newDateTime = field.Value.replace('T', ' ').replace('Z', '');
                     obj.put(field.Name, DateTime.valueOf(newDateTime));
+                } else if(field.Type == 'DECIMAL'){
+                    obj.put(field.Name, Decimal.valueOf(field.Value));
+                } else if(field.Type == 'INTEGER'){
+                    obj.put(field.Name, Integer.valueOf(field.Value));
+                } else if(field.Type == 'PERCENT'){
+                    obj.put(field.Name, Decimal.valueOf(field.Value));
                 } else {
                     obj.put(field.Name, String.valueOf(field.Value));
                 }
@@ -478,6 +485,60 @@ public with sharing class AndeeWorkbenchController {
             update obj;
         }
 
+
+    }
+    
+    
+    /* @method: InsertSingleEntryData
+     * @description: Insert a single entry
+     * @param : String querySingleRowJson : the json containing the data to insert.  Could not pass object in!!!!
+    */
+    @AuraEnabled
+    public static void  InsertSingleEntryData(String querySingleRowJson) {
+        // convert the JSON string to a QuerySingleRowWrapper object    
+        QuerySingleRowWrapper querySingleRowWrapper = (QuerySingleRowWrapper)JSON.deserialize(querySingleRowJson, QuerySingleRowWrapper.class);
+        // create an object of type objectApiName
+        SObject obj = Schema.getGlobalDescribe().get(querySingleRowWrapper.ObjectApiName).newSObject();
+
+        list<FieldWrapper> objFields = querySingleRowWrapper.Fields;
+
+        for(FieldWrapper field : objFields){
+            if(field.Value != ''){
+                if(field.Type == 'BOOLEAN'){
+                    obj.put(field.Name, field.Value == 'true');
+                } else if(field.Type == 'DATE'){
+                    obj.put(field.Name, Date.valueOf(field.Value));
+                } else if(field.Type == 'DATETIME'){
+                    string newDateTime = field.Value.replace('T', ' ').replace('Z', '');
+                    obj.put(field.Name, DateTime.valueOf(newDateTime));
+                } else if(field.Type == 'DECIMAL'){
+                    obj.put(field.Name, Decimal.valueOf(field.Value));
+                } else if(field.Type == 'INTEGER'){
+                    obj.put(field.Name, Integer.valueOf(field.Value));
+                } else if(field.Type == 'PERCENT'){
+                    obj.put(field.Name, Decimal.valueOf(field.Value));
+                } else {
+                    obj.put(field.Name, String.valueOf(field.Value));
+                }
+            }
+            
+        }
+
+        insert obj;
+    }
+    
+    
+    /* @method: DeleteEntry
+     * @description: Delete a single entry
+     * @param : id selectedId : The id of the entry to be deleted
+    */
+    @AuraEnabled
+    public static void DeleteEntry(id selectedId){
+        string objectApiName = selectedId.getsobjecttype().getDescribe().getName();
+        SObject obj = Schema.getGlobalDescribe().get(objectApiName).newSObject();
+        obj.Id = selectedId;
+
+        delete obj;
 
     }
 

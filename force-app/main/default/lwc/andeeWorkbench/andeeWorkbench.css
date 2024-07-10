@@ -40,3 +40,10 @@ table.dataTable th {
 table.dataTable td table.dataTable {
   width: 100%;
 }
+
+
+
+.highlight-row:hover {
+  background-color : #f0f0f0;
+  cursor: pointer;
+}

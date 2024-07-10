@@ -11,6 +11,8 @@ import getBatchJobStatus from '@salesforce/apex/BatchAndeeWorkbench.GetBatchJobS
 import getOrgDomainUrl from '@salesforce/apex/AndeeWorkbenchController.GetOrgDomainUrl';
 import getSingleEntryData from '@salesforce/apex/AndeeWorkbenchController.GetSingleEntryData';
 import updateSingleEntryData from '@salesforce/apex/AndeeWorkbenchController.UpdateSingleEntryData';
+import deleteEntry from '@salesforce/apex/AndeeWorkbenchController.DeleteEntry';
+import insertSingleEntryData from '@salesforce/apex/AndeeWorkbenchController.InsertSingleEntryData';
 
 export default class AndeeWorkbench extends LightningElement {    
     // Track variables for component state
@@ -37,13 +39,15 @@ export default class AndeeWorkbench extends LightningElement {
     @track selectedSingleRecordObject;
     @track rowData = [];
     @track isUpdateView = false;
+    @track isInsertView = false;
     @track limit = "500";
 
-    fieldArray = [];
+    @track fieldArray = [];
 
     fields = [];
     whereClause = ""; 
     sortOrder = "";
+    fieldArrayCaseSens = [];
 
     orgDomainUrl = "";
 
@@ -92,7 +96,8 @@ export default class AndeeWorkbench extends LightningElement {
             var returnOpts = [];
             var whereOpts = [];
             this.fieldArray = [];
-            var allValues = data;
+            var allValues = [];
+            allValues = data;
             for (var i = 0; i < allValues.length; i++) {
                 // Create options for field select dropdown
                 returnOpts = [ ...returnOpts, {label: allValues[i].Name, value: allValues[i].Name} ];
@@ -101,8 +106,9 @@ export default class AndeeWorkbench extends LightningElement {
                     whereOpts = [ ...whereOpts, {label: allValues[i].Name, value: allValues[i].Name} ];
                 }
                 this.fieldArray[allValues[i].Name.toLowerCase()] = allValues[i];
+                
             }
-
+            this.fieldArrayCaseSens = allValues;
             this.fieldOptions = returnOpts;
             this.fieldWhereOptions = whereOpts;
             this.isLoading = false;
@@ -121,7 +127,6 @@ export default class AndeeWorkbench extends LightningElement {
         this.isLoading = true;
         var obj = this.template.querySelector('[data-id="objectSelect"]')
         this.objectValue = obj.value;
-        console.log(this.objectValue);
         this.getFields();
     }
 
@@ -421,32 +426,6 @@ export default class AndeeWorkbench extends LightningElement {
     }
 
 
-    addFilterRow(){
-        console.log('addFilterRow');
-
-        // Get the id of the next filter row to create
-        /*var nextRow = 0;
-        for(var i = 0; i < 99; i++) {
-            const dataId = '[data-id="QB_filter_field_'+i + '"]';
-            var filterRow = this.template.querySelector(dataId);
-            console.log(i + ' : ' + filterRow);
-            if(filterRow===undefined || filterRow===null){
-                nextRow = i;
-                break;
-            }
-        }
-
-        var firstFilterRow = this.template.querySelector('[data-id="first-filter-row"]');
-        var newFilterRow = firstFilterRow.innerHTML;
-        newFilterRow = newFilterRow.replace('"QB_filter_field_0"', '"QB_filter_field_'+nextRow+'"');
-        newFilterRow = newFilterRow.replace('"QB_filter_compOper_0"', '"QB_filter_compOper_'+nextRow+'"');
-        newFilterRow = newFilterRow.replace('"QB_filter_value_0"', '"QB_filter_value_'+nextRow+'"');
-        var filterTable = this.template.querySelector('[data-id="filter_rows"]');
-        filterTable.innerHTML += "<tr>" + newFilterRow + "</tr>";*/
-
-
-
-    }
 
     // a function that accepts a text string called str & 2 more strings called startStr & endStr
     // The function finds the first occurance of startStr in str and returns the substring from the character immediately after startStr to the start of endStr
@@ -647,6 +626,7 @@ export default class AndeeWorkbench extends LightningElement {
         } else {
             // Gone back through all the ones displayed so return to query view
             this.isDisplaySingleId = false;
+            this.isInsertView = false;
         }
     }
 
@@ -705,17 +685,96 @@ export default class AndeeWorkbench extends LightningElement {
             updateSingleEntryData({querySingleRowJson : parmJson})
             .then(data => {
                 this.error = undefined;
+                this.isUpdateView = false
+                this.isLoading = false;
             
             })
             .catch(error => {
                 this.error = error.body.message;
                 console.error('error (updateView) => ', error); // error handling
+                this.isLoading = false;
             })
 
+        } else {
+            this.isUpdateView = true;
+            this.isLoading = false;
+        }
+        
+    }
+    
+
+    displayNewRowForInsert(event){
+        console.log('starting displayNewRowForInsert');
+        this.isLoading = true;
+        this.isInsertView = true;
+        this.isLoading = false;
+
+    }
+
+    insertRow(event){
+        console.log('starting insertRow');
+        this.isLoading = true;
+        var insertedData = [];
+        
+        for(var i=0; i<this.fieldArrayCaseSens.length; i++){
+            if(this.template.querySelector('[data-id="'+this.fieldArrayCaseSens[i].Name+'"]')){ // required as Id is not included on the insert fields
+                if(this.template.querySelector('[data-id="'+this.fieldArrayCaseSens[i].Name+'"]').value != ''){
+                    var temp = {};
+                    temp.Name = this.fieldArrayCaseSens[i].Name;
+                    temp.Value = this.template.querySelector('[data-id="'+this.fieldArrayCaseSens[i].Name+'"]').value;
+                    insertedData.push(temp);
+                }
+            }
         }
 
-        this.isUpdateView = !this.isUpdateView;
-        this.isLoading = false;
+        var parm = {
+            ObjectApiName : this.objectValue,
+            Fields : insertedData
+        };
+
+        const parmJson = JSON.stringify(parm);
+
+            
+        insertSingleEntryData({querySingleRowJson : parmJson})
+        .then(data => {
+            this.error = undefined;
+            this.isInsertView = false;
+            this.isLoading = false;
+        })
+        .catch(error => {
+            this.error = error.body.message;
+            console.error('error (insertSingleEntryData) => ', error); // error handling
+            this.isLoading = false;
+        })
+        
+    }
+
+    deleteRow(event){
+        console.log('starting deleteRow');
+        this.isLoading = true;
+
+        deleteEntry({selectedId : this.selectedSingleRecordId})
+        .then(data => {
+            this.error = undefined;
+            this.isDisplaySingleId = false;
+            this.isLoading = false;
+        })
+        .catch(error => {
+            this.error = error.body.message;
+            console.error('error (deleteRow) => ', error); // error handling
+            this.isLoading = false;
+        })
+        
+        
+
+    }
+
+    get isQueryMode() {
+        return !this.isDisplaySingleId && !this.isInsertView;
+    }
+
+    get insertButtonLabel() {
+        return this.objectValue ? 'Insert ' + this.objectValue : 'Insert';
     }
 
 }
