@@ -19,7 +19,7 @@
                         <div class="slds-media slds-no-space slds-grow">
                             <h2 class="slds-card__header-title">
                                 <span class="slds-truncate slds-m-right--xx-small" title="Workbench">
-                                    Workbench 1.0.4
+                                    Workbench 1.0.5
                                 </span>
                             </h2>
                         </div>
@@ -35,9 +35,21 @@
                 </div>
             </template>
 
+            <template if:false={hideInfoDiv}>
+                <div data-id="infoDiv" style="clear: both;">
+                    <div class="slds-notify slds-notify--alert slds-theme--alert-texture" role="alert" >                        
+                        <div class="closeInfoIcon">
+                            <lightning-icon icon-name='utility:close' alternative-text='close' variant='inverse' size='xx-small' title='close' onclick={closeInfo}></lightning-icon>
+                        </div>
+                        Please note that all date/times are in UTC/GMT
+                        <br/>
+                        This is also an early release so where possible please double check the results
+                    </div>
+                </div>
+            </template>
+
             <template if:true={isQueryMode}>
                 <div>
-
                     <table border="0" style="width: 100%;">
                         <tbody>
                             <tr>
@@ -46,7 +58,7 @@
                                     <select data-id="objectSelect" id="objectSelect" style="width: 16em" onchange={objectChanged}>
                                         <option value={objectValue}>--None--</option>
                                         <template for:each={objectOptions} for:item="oo" for:index="index">
-                                            <option key={oo.index} value={oo.value}>{oo.label}</option>
+                                            <option key={oo.index} value={oo.value} selected={oo.selected}>{oo.label}</option>
                                         </template>
                                     </select>
                                 </td>
@@ -78,7 +90,7 @@
                                     <select data-id="fieldSelect" id="fieldSelect" style="width: 16em;" multiple size="8" onchange={fieldChanged}>
                                         <option value='count()'>count()</option>
                                         <template for:each={fieldOptions} for:item="fo" for:index="index">
-                                            <option key={fo.index} value={fo.value}>{fo.label}</option>
+                                            <option key={fo.index} value={fo.value} selected={fo.selected}>{fo.label}</option>
                                         </template>
                                     </select>
                                 </td>
@@ -256,10 +268,13 @@
                                                 <input type="submit" name="querySubmit" value="Query" onclick={submitQuery}>
                                             </td>
                                             <td>
-                                                <input type="submit" name="querySubmit" value="TSV" onclick={submitTsvQuery}>
+                                                <input type="submit" name="querySubmitTsv" value="TSV" onclick={submitTsvQuery}>
                                             </td>
                                             <td>
-                                                <input type="submit" name="querySubmit" value="Batch TSV" onclick={submitQueryBatch}>
+                                                <input type="submit" name="querySubmitBatch" value="Batch TSV" onclick={submitQueryBatch}>
+                                            </td>
+                                            <td>
+                                                <input type="submit" name="resync" value="Resync SOQL" onclick={resyncSoql}>
                                             </td>
 
                                             <template if:true={objectValue}>

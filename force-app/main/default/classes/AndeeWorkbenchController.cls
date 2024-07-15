@@ -10,13 +10,16 @@ public with sharing class AndeeWorkbenchController {
 
     private static map<string, string> fieldTypeMap = new map<string, string>();
 
-    /* @method: GetOrgDomainUrl
-     * @description:  Get the Org Domain URL
-     * @return : string : Url
+    /* @method: GetSettings
+     * @description:  Get the Org Domain URL & user's Timezone
+     * @return : SettingsWrapper : OrgDomainUrl + UsersTimezone
     */   
     @AuraEnabled(cacheable=true)
-    public static string GetOrgDomainUrl(){
-        return System.Url.getOrgDomainUrl().toExternalForm();
+    public static SettingsWrapper GetSettings(){
+        SettingsWrapper settings = new SettingsWrapper();
+        settings.OrgDomainUrl = System.url.getOrgDomainUrl().toExternalForm();
+        settings.UsersTimezone = UserInfo.getTimeZone().getID();
+        return settings;
     }
     
     /* @method: GetAllObjects
@@ -244,7 +247,12 @@ public with sharing class AndeeWorkbenchController {
             return ((Date)fieldValue).year() + '-' + (((Date)fieldValue).month()<=9?'0':'')+((Date)fieldValue).month() + '-' + (((Date)fieldValue).day()<=9?'0':'')+((Date)fieldValue).day();
             //return ((Date)fieldValue).format();
         } else if(fieldType == 'DATETIME'){
-            return ((DateTime)fieldValue).format('yyyy-MM-dd') + 'T' + ((DateTime)fieldValue).format('HH:mm:ss') + 'Z';
+            // convert datetimes from GMT to the user's timezone    
+            //String convertedDate = ((DateTime)(fieldValue)).format('yyyy-MM-dd', UserInfo.getTimeZone().getID()) + 'T' + ((DateTime)(fieldValue)).format('HH:mm:ss', UserInfo.getTimeZone().getID()) + 'Z';
+            
+            // GMT only
+            String convertedDate = ((DateTime)fieldValue).format('yyyy-MM-dd') + 'T' + ((DateTime)fieldValue).format('HH:mm:ss') + 'Z';
+            return convertedDate;
             //return ((DateTime)fieldValue).format('yyyy-MM-ddTHH:mm:ssZ');
         } else if(fieldType == 'DOUBLE' || fieldType == 'INTEGER' || fieldType == 'CURRENCY' || fieldType == 'PERCENT'){
             return String.valueOf(fieldValue);
@@ -415,7 +423,7 @@ public with sharing class AndeeWorkbenchController {
 
         for(string fieldName : objFieldsMap.keyset()){
             objFieldsMap.get(fieldName).Value = FormatFieldValue(queryResults[0].get(fieldName), objFieldsMap.get(fieldName).Type);
-            objFieldsMap.get(fieldName).OriginalValue = FormatFieldValue(queryResults[0].get(fieldName), objFieldsMap.get(fieldName).Type);
+            objFieldsMap.get(fieldName).OriginalValue = objFieldsMap.get(fieldName).Value;
         }
 
         QuerySingleRowWrapper wrapper = new QuerySingleRowWrapper();
@@ -494,7 +502,7 @@ public with sharing class AndeeWorkbenchController {
      * @param : String querySingleRowJson : the json containing the data to insert.  Could not pass object in!!!!
     */
     @AuraEnabled
-    public static void  InsertSingleEntryData(String querySingleRowJson) {
+    public static Id InsertSingleEntryData(String querySingleRowJson) {
         // convert the JSON string to a QuerySingleRowWrapper object    
         QuerySingleRowWrapper querySingleRowWrapper = (QuerySingleRowWrapper)JSON.deserialize(querySingleRowJson, QuerySingleRowWrapper.class);
         // create an object of type objectApiName
@@ -525,6 +533,7 @@ public with sharing class AndeeWorkbenchController {
         }
 
         insert obj;
+        return obj.id;
     }
     
     
@@ -586,6 +595,11 @@ public with sharing class AndeeWorkbenchController {
     public class QuerySingleRowWrapper {
         @AuraEnabled public String ObjectApiName;
         @AuraEnabled public List<FieldWrapper> Fields;
+    }
+
+    public class SettingsWrapper {
+        @AuraEnabled public String OrgDomainUrl;
+        @AuraEnabled public String UsersTimezone;
     }
 
 
