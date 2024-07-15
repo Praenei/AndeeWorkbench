@@ -8,7 +8,7 @@ import submitQueryTsv from '@salesforce/apex/AndeeWorkbenchController.SubmitQuer
 import submitQueryBatch from '@salesforce/apex/BatchAndeeWorkbench.SubmitQueryBatch';
 import submitQueryCount from '@salesforce/apex/AndeeWorkbenchController.SubmitQueryCount';
 import getBatchJobStatus from '@salesforce/apex/BatchAndeeWorkbench.GetBatchJobStatus';
-import getOrgDomainUrl from '@salesforce/apex/AndeeWorkbenchController.GetOrgDomainUrl';
+import GetSettings from '@salesforce/apex/AndeeWorkbenchController.GetSettings';
 import getSingleEntryData from '@salesforce/apex/AndeeWorkbenchController.GetSingleEntryData';
 import updateSingleEntryData from '@salesforce/apex/AndeeWorkbenchController.UpdateSingleEntryData';
 import deleteEntry from '@salesforce/apex/AndeeWorkbenchController.DeleteEntry';
@@ -34,31 +34,38 @@ export default class AndeeWorkbench extends LightningElement {
     @track jobStatus;
     @track contentVersionUrl;
     @track isBatchJobCompleted;
-    @track isDisplaySingleId;
     @track selectedSingleRecordId;
     @track selectedSingleRecordObject;
     @track rowData = [];
+    @track isDisplaySingleId = false;
     @track isUpdateView = false;
     @track isInsertView = false;
     @track limit = "500";
+    @track hideInfoDiv = false;
 
-    @track fieldArray = [];
+    fieldArrayLowercase = []; // contains an array of the fields for the selected object, including the field name and whether it is filterable
 
-    fields = [];
-    whereClause = ""; 
+    selectedFields = []; // contains an array of the fields selected by the user from the dropdown
+    whereClause = ""; // contains the total where clause when a field is selected/unselected on the dropdown
     sortOrder = "";
-    fieldArrayCaseSens = [];
+    fieldArrayCaseSensitive = []; // Same as fieldArrayLowercase but field name is case sensitive
+    parsedSoql = {}; // contains the different parts of the SOQL query e.g. fields, objectName, whereClauses, orderByClauses, limitValue
 
     orgDomainUrl = "";
+    usersTimezone = "";
 
-    chainOfSingleRowIds = [];
+    chainOfSingleRowIds = []; // Used to control where the user goes after hitting the back button e.g. previous single row data or query
+
+    queryObject = '';
+    queryfields = [];
 
     // Initialization function when component is loaded
-    connectedCallback() { 
-        // Get the organization's domain URL
-        getOrgDomainUrl()
+    connectedCallback() {
+        // Get the organization's domain URL & the user's timezone
+        GetSettings()
         .then(result => {
-            this.orgDomainUrl = result;
+            this.orgDomainUrl = result.OrgDomainUrl;
+            this.usersTimezone = result.UsersTimezone
         })
         .catch(error => {
             window.console.log('error (connectedCallback) =====> '+JSON.stringify(error));
@@ -80,7 +87,7 @@ export default class AndeeWorkbench extends LightningElement {
                 returnOpts = [ ...returnOpts, {label: allValues[i], value: allValues[i]} ];
             }
 
-            this.objectOptions = returnOpts; 
+            this.objectOptions = returnOpts;
             this.isLoading = false;
         } else if (error) {
             this.error = error.body.message;
@@ -100,15 +107,15 @@ export default class AndeeWorkbench extends LightningElement {
             allValues = data;
             for (var i = 0; i < allValues.length; i++) {
                 // Create options for field select dropdown
-                returnOpts = [ ...returnOpts, {label: allValues[i].Name, value: allValues[i].Name} ];
+                returnOpts = [ ...returnOpts, {label: allValues[i].Name, value: allValues[i].Name, selected: false} ];
                 if(allValues[i].Filterable){
                     // Create options for where clause fields
-                    whereOpts = [ ...whereOpts, {label: allValues[i].Name, value: allValues[i].Name} ];
+                    whereOpts = [ ...whereOpts, {label: allValues[i].Name, value: allValues[i].Name, selected: false} ];
                 }
-                this.fieldArray[allValues[i].Name.toLowerCase()] = allValues[i];
+                this.fieldArrayLowercase[allValues[i].Name.toLowerCase()] = allValues[i];
                 
             }
-            this.fieldArrayCaseSens = allValues;
+            this.fieldArrayCaseSensitive = allValues;
             this.fieldOptions = returnOpts;
             this.fieldWhereOptions = whereOpts;
             this.isLoading = false;
@@ -129,6 +136,7 @@ export default class AndeeWorkbench extends LightningElement {
         this.objectValue = obj.value;
         this.getFields();
     }
+    
 
     // Function to submit a SOQL query
     submitQuery(){
@@ -138,55 +146,19 @@ export default class AndeeWorkbench extends LightningElement {
 
         // Get the SOQL query from the textarea
         this.soqlQuery = this.template.querySelector('[data-id="soql_query_textarea"]').value;
-        var upperSoql = this.soqlQuery.toUpperCase();
 
-        console.log('soqlQuery :' +  this.soqlQuery);
-        console.log('objectApiName :' +  this.objectValue);
+        this.parsedSoql = this.parseSOQL(this.soqlQuery);
 
-        // Extract fields from the SOQL query
-        var fields = this.findStringBetween(this.soqlQuery, 'SELECT ', ' FROM ').split(',');
-        for(var i=0; i<fields.length; i++){
-            fields[i] = fields[i].trim();
-        }
-        console.log(fields);
-
-        // Extract WHERE clause from the SOQL query
-        var whereClause = '';
-        if(upperSoql.indexOf(' WHERE ') > -1){
-            if(upperSoql.indexOf(' ORDER BY ') > -1){
-                whereClause = this.findStringBetween(this.soqlQuery, ' WHERE ', ' ORDER BY ');
-            } else {
-                whereClause = this.findStringBetween(this.soqlQuery, ' WHERE ', ' LIMIT ');
-            }
-        }
-        console.log(whereClause);
-
-        // Extract ORDER BY clause from the SOQL query
-        var sortOrder = '';
-        if(upperSoql.indexOf(' ORDER BY ') > -1){
-            sortOrder = this.findStringBetween(this.soqlQuery, ' ORDER BY ', ' LIMIT ');
-        }
-        console.log(sortOrder);
-
-        // Extract LIMIT clause from the SOQL query
-        var limit = '';
-        if(upperSoql.indexOf(' LIMIT ') > -1){
-            limit = this.findStringBetween(this.soqlQuery, ' LIMIT ', ' ??? ');
-        }
-        console.log(limit);
-
-        console.log('All rows :' + this.template.querySelector('[data-id="excludeDeleted"]').checked);
-
-        if(fields.length == 1 && fields[0].toLowerCase == 'count()'){
+        if(this.parsedSoql.fields.length == 1 && this.parsedSoql.fields.toLowerCase == 'count()'){
 
             console.log('Performing count query');
 
             // If count is true, submit a count query
-            submitQuery({objectApiName : this.objectValue,
-                fields : fields,
-                whereClause : whereClause, 
-                sortOrder : sortOrder, 
-                limitCount : limit,
+            submitQuery({objectApiName : this.parsedSoql.objectName,
+                fields : this.parsedSoql.fields,
+                whereClause : this.parsedSoql.whereClauses, 
+                sortOrder : this.parsedSoql.orderByClauses, 
+                limitCount : this.parsedSoql.limitValue,
                 allRows : this.template.querySelector('[data-id="excludeDeleted"]').checked})
                 .then(data => {
                     // Process count query results
@@ -208,11 +180,11 @@ export default class AndeeWorkbench extends LightningElement {
             console.log('Performing regular query');
 
             // Submit a regular SOQL query
-            submitQuery({objectApiName : this.objectValue,
-                fields : fields,
-                whereClause : whereClause, 
-                sortOrder : sortOrder, 
-                limitCount : limit,
+            submitQuery({objectApiName : this.parsedSoql.objectName,
+                fields : this.parsedSoql.fields,
+                whereClause : this.parsedSoql.whereClauses, 
+                sortOrder : this.parsedSoql.orderByClauses, 
+                limitCount : this.parsedSoql.limitValue,
                 allRows : this.template.querySelector('[data-id="excludeDeleted"]').checked})
             .then(data => {
                 console.log(data);
@@ -235,8 +207,8 @@ export default class AndeeWorkbench extends LightningElement {
                 // Process field linkability
                 for(var i=0; i<this.queryResults.length; i++){
                     for(var j=0; j<this.queryResults[i].Fields.length; j++){
-                        if (this.fieldArray[this.queryResults[i].Fields[j].Name.toLowerCase()]?.Linkable !== undefined) {
-                            this.queryResults[i].Fields[j].Linkable = this.fieldArray[this.queryResults[i].Fields[j].Name.toLowerCase()].Linkable;
+                        if (this.fieldArrayLowercase[this.queryResults[i].Fields[j].Name.toLowerCase()]?.Linkable !== undefined) {
+                            this.queryResults[i].Fields[j].Linkable = this.fieldArrayLowercase[this.queryResults[i].Fields[j].Name.toLowerCase()].Linkable;
                             if (this.queryResults[i].Fields[j].Linkable) {
                                 this.queryResults[i].Fields[j].HRef = this.orgDomainUrl + '/' + this.queryResults[i].Fields[j].Value;
                             }
@@ -255,6 +227,7 @@ export default class AndeeWorkbench extends LightningElement {
         }
     }
 
+
     // Function to submit a TSV query
     submitTsvQuery(){
         console.log('starting submitTsvQuery');
@@ -263,62 +236,28 @@ export default class AndeeWorkbench extends LightningElement {
 
         // Get the SOQL query from the textarea
         this.soqlQuery = this.template.querySelector('[data-id="soql_query_textarea"]').value;
-        var upperSoql = this.soqlQuery.toUpperCase();
 
-        console.log('soqlQuery :' +  this.soqlQuery);
-        console.log('objectApiName :' +  this.objectValue);
+        this.parsedSoql = this.parseSOQL(this.soqlQuery);
 
-        // Extract fields from the SOQL query
-        var fields = this.findStringBetween(this.soqlQuery, 'SELECT ', ' FROM ').split(',');
-        for(var i=0; i<fields.length; i++){
-            fields[i] = fields[i].trim();
-        }
-        console.log(fields);
-
-        // Extract WHERE clause from the SOQL query
-        var whereClause = '';
-        if(upperSoql.indexOf(' WHERE ') > -1){
-            if(upperSoql.indexOf(' ORDER BY ') > -1){
-                whereClause = this.findStringBetween(this.soqlQuery, ' WHERE ', ' ORDER BY ');
-            } else {
-                whereClause = this.findStringBetween(this.soqlQuery, ' WHERE ', ' LIMIT ');
-            }
-        }
-        console.log(whereClause);
-
-        // Extract ORDER BY clause from the SOQL query
-        var sortOrder = '';
-        if(upperSoql.indexOf(' ORDER BY ') > -1){
-            sortOrder = this.findStringBetween(this.soqlQuery, ' ORDER BY ', ' LIMIT ');
-        }
-        console.log(sortOrder);
-
-        // Extract LIMIT clause from the SOQL query
-        var limit = '';
-        if(upperSoql.indexOf(' LIMIT ') > -1){
-            limit = this.findStringBetween(this.soqlQuery, ' LIMIT ', ' ??? ');
-        }
-        console.log(limit);
-
-        console.log('All rows :' + this.template.querySelector('[data-id="excludeDeleted"]').checked);
-        submitQueryTsv({objectApiName : this.objectValue,
-            fields : fields,
-            whereClause : whereClause, 
-            sortOrder : sortOrder, 
-            limitCount : limit,
+        submitQueryTsv({objectApiName : this.parsedSoql.objectName,
+            fields : this.parsedSoql.fields,
+            whereClause : this.parsedSoql.whereClauses, 
+            sortOrder : this.parsedSoql.orderByClauses, 
+            limitCount : this.parsedSoql.limitValue,
             allRows : this.template.querySelector('[data-id="excludeDeleted"]').checked})
         .then(data => {
             // Process TSV query results
             this.queryResults = [];
             this.queryHeadings = ['Download CSV'];
-            fields.Value = 'Download';
-            fields.Linkable = true;
-            fields.IsDownloadLink = true;
-            fields.HRef = this.orgDomainUrl + '/sfc/servlet.shepherd/version/download/'+data+'?operationContext=S1';
+            const downloadLink = {};
+            downloadLink.Value = 'Download';
+            downloadLink.Linkable = true;
+            downloadLink.IsDownloadLink = true;
+            downloadLink.HRef = this.orgDomainUrl + '/sfc/servlet.shepherd/version/download/'+data+'?operationContext=S1';
             this.queryResults[0] = {};
             this.queryResults[0].RowId = 'dummy';
             this.queryResults[0].Fields = [];
-            this.queryResults[0].Fields.push(fields);
+            this.queryResults[0].Fields.push(downloadLink);
         
             this.isLoading = false;
             this.error = undefined;
@@ -339,47 +278,14 @@ export default class AndeeWorkbench extends LightningElement {
         this.isLoading = true;
 
         this.soqlQuery = this.template.querySelector('[data-id="soql_query_textarea"]').value;
-        var upperSoql = this.soqlQuery.toUpperCase();
 
-        console.log('soqlQuery :' +  this.soqlQuery);
-        console.log('objectApiName :' +  this.objectValue);
+        this.parsedSoql = this.parseSOQL(this.soqlQuery);
 
-        var fields = this.findStringBetween(this.soqlQuery, 'SELECT ', ' FROM ').split(',');
-        for(var i=0; i<fields.length; i++){
-            fields[i] = fields[i].trim();
-        }
-        console.log(fields);
-
-        var whereClause = '';
-        if(upperSoql.indexOf(' WHERE ') > -1){
-            if(upperSoql.indexOf(' ORDER BY ') > -1){
-                whereClause = this.findStringBetween(this.soqlQuery, ' WHERE ', ' ORDER BY ');
-            } else {
-                whereClause = this.findStringBetween(this.soqlQuery, ' WHERE ', ' LIMIT ');
-            }
-        }
-        console.log(whereClause);
-
-        var sortOrder = '';
-        if(upperSoql.indexOf(' ORDER BY ') > -1){
-            sortOrder = this.findStringBetween(this.soqlQuery, ' ORDER BY ', ' LIMIT ');
-        }
-        console.log(sortOrder);
-
-        
-        var limit = '';
-        if(upperSoql.indexOf(' LIMIT ') > -1){
-            limit = this.findStringBetween(this.soqlQuery, ' LIMIT ', ' ??? ');
-        }
-        console.log(limit);
-
-        console.log('All rows :' + this.template.querySelector('[data-id="excludeDeleted"]').checked);
-
-        submitQueryBatch({objectApiName : this.objectValue,
-            fields : fields,
-            whereClause : whereClause, 
-            sortOrder : sortOrder, 
-            limitCount : limit,
+        submitQueryBatch({objectApiName : this.parsedSoql.objectName,
+            fields : this.parsedSoql.fields,
+            whereClause : this.parsedSoql.whereClauses, 
+            sortOrder : this.parsedSoql.orderByClauses, 
+            limitCount : this.parsedSoql.limitValue,
             allRows : this.template.querySelector('[data-id="excludeDeleted"]').checked})
         .then(result => {
             console.log('Result from batch job :');
@@ -399,6 +305,54 @@ export default class AndeeWorkbench extends LightningElement {
 
 
     }
+
+
+    parseSOQL(soqlString){
+        const result = {
+            objectName: '',
+            fields: [],
+            whereClauses: '',
+            orderByClauses: '',
+            limitValue: ''           
+        }
+
+        const parts = soqlString.replace(/\s+/g,' ').toLowerCase().split(' ');
+
+        // get fields
+        const selectIndex = parts.indexOf('select');
+        const fromIndex = parts.indexOf('from');
+        result.fields = soqlString.slice(soqlString.toLowerCase().indexOf('select') + 6, soqlString.toLowerCase().indexOf('from')).trim().split(',').map(f => f.trim());
+
+        // get object name
+        result.objectName = parts[fromIndex + 1];
+
+        //get where clauses
+        const whereIndex = parts.indexOf('where');
+        if(whereIndex !== -1){
+            const orderByIndex = parts.indexOf('order', whereIndex);
+            const limitIndex = parts.indexOf('limit', whereIndex);
+            const whereEndIndex = orderByIndex !== -1 ? orderByIndex : limitIndex !== -1 ? limitIndex : parts.length;
+            result.whereClauses = parts.slice(whereIndex + 1, whereEndIndex).join(' ');
+        }
+
+        // Get order by clauses
+        const orderByIndex = parts.indexOf('order');
+        if(orderByIndex !== -1){
+            const limitIndex = parts.indexOf('limit', orderByIndex);
+            const orderByEnd = limitIndex !== -1 ? limitIndex : parts.length;
+            result.orderByClauses = parts.slice(orderByIndex + 2, orderByEnd).join(' ');
+        }
+
+        // get Limit value
+        const limitIndex = parts.indexOf('limit');
+        if(limitIndex !== -1){
+            result.limitValue = parseInt(parts[limitIndex + 1], 10);
+        }
+
+        console.log('Parsed SOQL :' + JSON.stringify(result));
+        return result;
+    }
+
 
     monitorJobProgress(){
         const checkStatus = setInterval(() => {
@@ -427,32 +381,6 @@ export default class AndeeWorkbench extends LightningElement {
 
 
 
-    // a function that accepts a text string called str & 2 more strings called startStr & endStr
-    // The function finds the first occurance of startStr in str and returns the substring from the character immediately after startStr to the start of endStr
-    // If the startStr is not found then return an empty string
-    // If the endStr is not found then it will go to the end of str 
-    findStringBetween(str, startStr, endStr){
-        var lowerStr = str.toLowerCase();
-        var lowerStartStr = startStr.toLowerCase();
-        var lowerEndStr = endStr.toLowerCase();
-
-        var start = lowerStr.indexOf(lowerStartStr);
-        if(start == -1){
-            return '';
-        } else {
-            start += startStr.length;
-        }
-
-        var end = lowerStr.indexOf(lowerEndStr, start);
-        if(end == -1){
-            end = str.length;
-        }
-
-        return str.substring(start, end);
-    }
-
-
-
 
     fieldChanged(event){
         this.isLoading = true;
@@ -470,8 +398,8 @@ export default class AndeeWorkbench extends LightningElement {
             } 
         } 
 
-        this.fields=selectedFields;
-        console.log(this.fields);
+        this.selectedFields=selectedFields;
+        console.log(this.selectedFields);
         this.rebuildQuery();
     }
     
@@ -554,7 +482,7 @@ export default class AndeeWorkbench extends LightningElement {
                     if(this.template.querySelector('[data-id="QB_filter_value_'+i+'"]').value == 'null'){
                         this.whereClause += ' ' + this.template.querySelector('[data-id="QB_filter_value_'+i+'"]').value;
                     } else {
-                        if(this.fieldArray[whereFieldValue.toLowerCase()].Type == 'BOOLEAN' || this.fieldArray[whereFieldValue.toLowerCase()].Type == 'DATE' || this.fieldArray[whereFieldValue.toLowerCase()].Type == 'DATETIME' || this.fieldArray[whereFieldValue.toLowerCase()].Type == 'Double'){
+                        if(this.fieldArrayLowercase[whereFieldValue.toLowerCase()].Type == 'BOOLEAN' || this.fieldArrayLowercase[whereFieldValue.toLowerCase()].Type == 'DATE' || this.fieldArrayLowercase[whereFieldValue.toLowerCase()].Type == 'DATETIME' || this.fieldArrayLowercase[whereFieldValue.toLowerCase()].Type == 'Double'){
                             this.whereClause += ' ' + this.template.querySelector('[data-id="QB_filter_value_'+i+'"]').value;
                         } else {
                             if (whereOperValue == 'starts'){
@@ -583,7 +511,7 @@ export default class AndeeWorkbench extends LightningElement {
     rebuildQuery(event){
         console.log('starting rebuildQuery');        
 
-        var tempSoql = 'SELECT ' + this.fields.join(', ') + ' FROM ' + this.objectValue;
+        var tempSoql = 'SELECT ' + this.selectedFields.join(', ') + ' FROM ' + this.objectValue;
         if (this.whereClause != '') {
             tempSoql += ' WHERE ' + this.whereClause;
         }
@@ -629,6 +557,94 @@ export default class AndeeWorkbench extends LightningElement {
             this.isInsertView = false;
         }
     }
+
+
+    resyncSoql(){
+        console.log('starting resyncSoql');
+
+        this.isLoading = true;
+        
+        this.soqlQuery = this.template.querySelector('[data-id="soql_query_textarea"]').value;
+        this.parsedSoql = this.parseSOQL(this.soqlQuery);
+        const parsedObjValue = this.parsedSoql.objectName.toLowerCase();
+
+        console.log('Object comparision ' + parsedObjValue + ':' + this.objectValue);
+
+        if(parsedObjValue !== this.objectValue){
+
+            console.dir(this.objectOptions);
+            console.log(this.objectOptions.length);
+
+            for(let i=0; i<this.objectOptions.length; i++){
+                if(this.objectOptions[i].value.toLowerCase() === parsedObjValue){
+                    this.objectOptions[i].selected = true;
+                    this.objectValue = this.objectOptions[i].value;
+                } else {
+                    this.objectOptions[i].selected = false;
+                }
+            }
+
+            for(let i=0; i<this.objectOptions.length; i++){
+                if(this.objectOptions[i].selected){
+                    console.log('Selected object is ' + this.objectOptions[i].value);
+                }
+            }
+
+            console.log('get fields for object ' + this.objectValue);
+
+            getFieldsForObject({objectName : this.objectValue})
+            .then(data => {
+                var returnOpts = [];
+                var whereOpts = [];
+                this.fieldArray = [];
+                var allValues = [];
+                allValues = data;
+
+                var selectedFieldsCaseInsensitive = this.parsedSoql.fields.map(f => f.toLowerCase());
+                //const fldSelect = this.template.querySelector('[data-id="fieldSelect"]');
+                //console.log('fldSelect:' + fldSelect);
+                console.log('Looping through fields for object ' + this.objectValue);
+                for (var i = 0; i < allValues.length; i++) {
+                    // console.log(allValues[i].Name + ' - ' + selectedFieldsCaseInsensitive.includes(allValues[i].Name.toLowerCase()));
+                    // Create options for field select dropdown
+                    returnOpts = [ ...returnOpts, {label: allValues[i].Name, value: allValues[i].Name, selected: selectedFieldsCaseInsensitive.includes(allValues[i].Name.toLowerCase())}];
+                    if(allValues[i].Filterable){
+                        // Create options for where clause fields
+                        whereOpts = [ ...whereOpts, {label: allValues[i].Name, value: allValues[i].Name} ];
+                    }
+                    this.fieldArrayLowercase[allValues[i].Name.toLowerCase()] = allValues[i];                    
+                }
+                
+                this.fieldArrayCaseSensitive = allValues;
+                this.fieldOptions = returnOpts;
+                this.fieldWhereOptions = whereOpts;
+                this.error = undefined;
+                this.isLoading = false;
+            })
+            .catch(error => {
+                this.error = 'error (getFieldsForObject) => ' + error;
+                console.error('error (getFieldsForObject) => ', error);
+                this.isLoading = false;
+            });
+        } else {
+
+            console.log('Object not changed so just update fields and where options : ' + this.isLoading);
+
+            var selectedFieldsCaseInsensitive = this.parsedSoql.fields.map(f => f.toLowerCase());
+
+            const fldSelect = this.template.querySelector('[data-id="fieldSelect"]');
+            for(let i=0; i<fldSelect.options.length; i++){
+                // check if selectedFieldsCaseInsensitive contains the value of the option in lower case
+                if(selectedFieldsCaseInsensitive.includes(fldSelect.options[i].value.toLowerCase())){
+                    fldSelect.options[i].selected = true;
+                } else {
+                    fldSelect.options[i].selected = false;
+                }
+            }
+            this.isLoading = false;
+        }
+    }
+
 
     getSingleEntryData(recordId){
         this.isUpdateView = false;
@@ -716,12 +732,12 @@ export default class AndeeWorkbench extends LightningElement {
         this.isLoading = true;
         var insertedData = [];
         
-        for(var i=0; i<this.fieldArrayCaseSens.length; i++){
-            if(this.template.querySelector('[data-id="'+this.fieldArrayCaseSens[i].Name+'"]')){ // required as Id is not included on the insert fields
-                if(this.template.querySelector('[data-id="'+this.fieldArrayCaseSens[i].Name+'"]').value != ''){
+        for(var i=0; i<this.fieldArrayCaseSensitive.length; i++){
+            if(this.template.querySelector('[data-id="'+this.fieldArrayCaseSensitive[i].Name+'"]')){ // required as Id is not included on the insert fields
+                if(this.template.querySelector('[data-id="'+this.fieldArrayCaseSensitive[i].Name+'"]').value != ''){
                     var temp = {};
-                    temp.Name = this.fieldArrayCaseSens[i].Name;
-                    temp.Value = this.template.querySelector('[data-id="'+this.fieldArrayCaseSens[i].Name+'"]').value;
+                    temp.Name = this.fieldArrayCaseSensitive[i].Name;
+                    temp.Value = this.template.querySelector('[data-id="'+this.fieldArrayCaseSensitive[i].Name+'"]').value;
                     insertedData.push(temp);
                 }
             }
@@ -764,13 +780,18 @@ export default class AndeeWorkbench extends LightningElement {
             console.error('error (deleteRow) => ', error); // error handling
             this.isLoading = false;
         })
-        
-        
+    }
 
+    closeInfo(event){
+        this.hideInfoDiv = true;
     }
 
     get isQueryMode() {
         return !this.isDisplaySingleId && !this.isInsertView;
+    }
+
+    get queryMainDivClass() {
+        return this.isQueryMode?'':'slds-hide';
     }
 
     get insertButtonLabel() {
