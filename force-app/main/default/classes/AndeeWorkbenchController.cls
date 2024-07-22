@@ -68,9 +68,11 @@ public with sharing class AndeeWorkbenchController {
                 fw.Type = fieldResult.getType().name();
                 fw.Filterable = fieldResult.isFilterable();
                 fw.Groupable = fieldResult.isGroupable();
+                fw.Createable = fieldResult.isCreateable();
                 fw.Updatable = fieldResult.isUpdateable();
                 fw.Linkable = (fw.Type=='Id' || fw.Type=='REFERENCE')?true:false;
                 fw.Value = '';
+
                 fieldsMap.put(fw.Name, fw);
                 fieldNames.add(fieldResult.getName()); 
             } 
@@ -505,6 +507,7 @@ public with sharing class AndeeWorkbenchController {
     public static Id InsertSingleEntryData(String querySingleRowJson) {
         // convert the JSON string to a QuerySingleRowWrapper object    
         QuerySingleRowWrapper querySingleRowWrapper = (QuerySingleRowWrapper)JSON.deserialize(querySingleRowJson, QuerySingleRowWrapper.class);
+
         // create an object of type objectApiName
         SObject obj = Schema.getGlobalDescribe().get(querySingleRowWrapper.ObjectApiName).newSObject();
 
@@ -561,6 +564,9 @@ public with sharing class AndeeWorkbenchController {
         
         @AuraEnabled
         public String Type;
+        
+        @AuraEnabled
+        public Boolean Createable;
         
         @AuraEnabled
         public Boolean Filterable;
