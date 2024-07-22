@@ -56,7 +56,6 @@
                                 <td valign="top" width="1" style="margin-top:2em;">
                                     Object:<br/>
                                     <select data-id="objectSelect" id="objectSelect" style="width: 16em" onchange={objectChanged}>
-                                        <option value={objectValue}>--None--</option>
                                         <template for:each={objectOptions} for:item="oo" for:index="index">
                                             <option key={oo.index} value={oo.value} selected={oo.selected}>{oo.label}</option>
                                         </template>
@@ -241,9 +240,6 @@
 
                                                     </table>
                                                 </td>
-                                                <!--<td id="filter_plus_cell" valign="bottom">
-                                                    <lightning-icon icon-name='action:new' alternative-text='new' size='xx-small' title='new' onclick={addFilterRow}></lightning-icon>
-                                                </td>-->
                                             </tr>
                                         </tbody>
                                     </table>
@@ -290,16 +286,19 @@
                     </table>
                 </div>
 
-                <div style="clear: both;">
+                <!--<div style="clear: both;">-->
+                <div class="scrollableContainer">
                     <br>
                     <template if:true={queryResults}>
-                        <table id="query_results" class="dataTable">
-                            <tbody>
+                        <table id="query_results" class="scrollable">
+                            <thead>
                                 <tr>
                                     <template for:each={queryHeadings} for:item="qh" for:index="index">
                                         <th key={qh.index}>{qh}</th>
                                     </template>
                                 </tr>
+                            </thead>
+                            <tbody>
                                 <template for:each={queryResults} for:item="record">
                                     <tr key={record.RowId} class="highlight-row">
                                     <template for:each={record.Fields} for:item="field">
@@ -343,7 +342,7 @@
                 Single Id Display : {selectedSingleRecordId} for Object : {selectedSingleRecordObject}
 
                 <p>
-                    <input type="submit" name="back" value="Back" onclick={displayQueryView}>
+                    <input type="submit" name="back" value="Back" onclick={goBack}>
                     <input type="submit" name="update" value="Update" onclick={updateView}>
                     <template if:false={isUpdateView}>
                         <input type="submit" name="delete" value="Delete" onclick={deleteRow}>
@@ -356,7 +355,12 @@
                             <template if:false={isUpdateView}>
                                 <tr key={record.Name} class="highlight-row">
                                     <td>
-                                        {record.Name}
+                                        <template if:true={record.Updatable}>
+                                            <b>{record.Name}</b>
+                                        </template>
+                                        <template if:false={record.Updatable}>
+                                            {record.Name}
+                                        </template>
                                     </td>
                                     
                                     <td>
@@ -389,7 +393,7 @@
 
 
                 <p>
-                    <input type="submit" name="back" value="Back" onclick={displayQueryView}>
+                    <input type="submit" name="back" value="Back" onclick={goBack}>
                     <input type="submit" name="update" value="Update" onclick={updateView}>
                     <template if:false={isUpdateView}>
                         <input type="submit" name="delete" value="Delete" onclick={deleteRow}>
@@ -405,13 +409,13 @@
                 Object : {objectValue}
 
                 <p>
-                    <input type="submit" name="back" value="Back" onclick={displayQueryView}>
+                    <input type="submit" name="back" value="Back" onclick={goBack}>
                     <input type="submit" name="insert" value="Insert" onclick={insertRow}>
                 </p>
 
                 <table id="insert_row" class="dataTable">
                     <tbody>
-                        <template for:each={fieldArrayCaseSens} for:item="record">
+                        <template for:each={fieldArrayCaseSensitive} for:item="record">
                             <template if:true={record.Updatable}>
                                 <tr key={record.Name} class="highlight-row">
                                     <td>
@@ -422,6 +426,18 @@
                                     </td>
                                 </tr>
                             </template>
+                            <template if:false={record.Updatable}>
+                                <template if:true={record.Createable}>
+                                    <tr key={record.Name} class="highlight-row">
+                                        <td>
+                                            {record.Name}
+                                        </td>
+                                        <td>
+                                            <input type="text" data-id={record.Name} size="30" name="updateField" data-fieldname={record.Name} value={record.Value}/>
+                                        </td>
+                                    </tr>
+                                    </template>
+                            </template>
                         </template>
 
                     </tbody>
@@ -429,7 +445,7 @@
 
 
                 <p>
-                    <input type="submit" name="back" value="Back" onclick={displayQueryView}>
+                    <input type="submit" name="back" value="Back" onclick={goBack}>
                     <input type="submit" name="insert" value="Insert" onclick={insertRow}>
                 </p>
             </template>
