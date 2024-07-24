@@ -417,7 +417,7 @@ public with sharing class AndeeWorkbenchController {
             objFieldsMap.put(objField.Name, objField);
         }
 
-        string query = 'SELECT ' + String.join(objFieldsMap.keyset(), ', ') + ' FROM ' + objectApiName + ' WHERE Id = \'' + selectedId + '\'';
+        string query = 'SELECT ' + String.join(objFieldsMap.keyset(), ', ') + ' FROM ' + objectApiName + ' WHERE Id = \'' + selectedId + '\' ALL ROWS';
 
 
         // Execute the query
@@ -551,6 +551,21 @@ public with sharing class AndeeWorkbenchController {
         obj.Id = selectedId;
 
         delete obj;
+
+    }    
+    
+    
+    /* @method: UndeleteEntry
+     * @description: Undelete a single entry
+     * @param : id selectedId : The id of the entry to be undeleted
+    */
+    @AuraEnabled
+    public static void UndeleteEntry(id selectedId){
+        string objectApiName = selectedId.getsobjecttype().getDescribe().getName();
+        SObject obj = Schema.getGlobalDescribe().get(objectApiName).newSObject();
+        obj.Id = selectedId;
+
+        undelete obj;
 
     }
 
