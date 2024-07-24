@@ -12,6 +12,7 @@ import GetSettings from '@salesforce/apex/AndeeWorkbenchController.GetSettings';
 import getSingleEntryData from '@salesforce/apex/AndeeWorkbenchController.GetSingleEntryData';
 import updateSingleEntryData from '@salesforce/apex/AndeeWorkbenchController.UpdateSingleEntryData';
 import deleteEntry from '@salesforce/apex/AndeeWorkbenchController.DeleteEntry';
+import undeleteEntry from '@salesforce/apex/AndeeWorkbenchController.UndeleteEntry';
 import insertSingleEntryData from '@salesforce/apex/AndeeWorkbenchController.InsertSingleEntryData';
 
 export default class AndeeWorkbench extends LightningElement {    
@@ -40,6 +41,7 @@ export default class AndeeWorkbench extends LightningElement {
     @track isDisplaySingleId = false;
     @track isUpdateView = false;
     @track isInsertView = false;
+    @track isDeleted = false;
     @track limit = "500";
     @track hideInfoDiv = false;
 
@@ -646,11 +648,25 @@ export default class AndeeWorkbench extends LightningElement {
         console.log('starting getSingleEntryData');
 
         this.isUpdateView = false;
+        this.isDeleted = false;
         getSingleEntryData({selectedId : recordId})
         .then(data => {
             this.rowData = [];
             this.selectedSingleRecordObject = data.ObjectApiName;
+
             this.rowData = data.Fields;
+
+            // Check if data.Fields contains iSDeleted field & if it does set this.isDeleted to true so that the undelete button appears
+            for(var i=0; i<this.rowData.length; i++){
+                if(this.rowData[i].Name == 'IsDeleted'){
+                    if(this.rowData[i].Value.toLowerCase() == 'true'){                        
+                        this.isDeleted = true;
+                    }   
+                    break;
+                }
+            }
+
+
             this.isLoading = false;
             this.error = undefined;
         
@@ -772,6 +788,7 @@ export default class AndeeWorkbench extends LightningElement {
         
     }
 
+
     deleteRow(event){
         console.log('starting deleteRow');
         this.isLoading = true;
@@ -791,7 +808,30 @@ export default class AndeeWorkbench extends LightningElement {
             console.error('error (deleteRow) => ', error); // error handling
             this.isLoading = false;
         })
+    }    
+    
+
+    undeleteRow(event){
+        console.log('starting undeleteRow');
+        this.isLoading = true;
+
+        undeleteEntry({selectedId : this.selectedSingleRecordId})
+        .then(data => {
+            this.error = undefined;
+            this.isDisplaySingleId = false;
+            this.isLoading = false;
+        })
+        .catch(error => {
+            if(error.body.fieldErrors.Name){
+                this.error = error.body.fieldErrors.Name[0].message;
+            } else {
+                this.error = 'Error occurred.  See console log for details';
+            }
+            console.error('error (undeleteRow) => ', error); // error handling
+            this.isLoading = false;
+        })
     }
+
 
     closeInfo(event){
         console.log('starting closeInfo');
