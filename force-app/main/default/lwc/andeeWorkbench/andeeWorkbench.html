@@ -19,7 +19,7 @@
                         <div class="slds-media slds-no-space slds-grow">
                             <h2 class="slds-card__header-title">
                                 <span class="slds-truncate slds-m-right--xx-small" title="Workbench">
-                                    Workbench 1.0.5
+                                    Workbench 1.0.6
                                 </span>
                             </h2>
                         </div>
@@ -345,8 +345,13 @@
                     <input type="submit" name="back" value="Back" onclick={goBack}>
                     <input type="submit" name="update" value="Update" onclick={updateView}>
                     <template if:false={isUpdateView}>
-                        <input type="submit" name="delete" value="Delete" onclick={deleteRow}>
-                    </template>
+                        <template if:false={isDeleted}>
+                            <input type="submit" name="delete" value="Delete" onclick={deleteRow}>
+                        </template>               
+                        <template if:true={isDeleted}>
+                            <input type="submit" name="undelete" value="Undelete" onclick={undeleteRow}>
+                        </template>
+                    </template>     
                 </p>
 
                 <table id="single_row_results" class="dataTable">
@@ -396,7 +401,12 @@
                     <input type="submit" name="back" value="Back" onclick={goBack}>
                     <input type="submit" name="update" value="Update" onclick={updateView}>
                     <template if:false={isUpdateView}>
-                        <input type="submit" name="delete" value="Delete" onclick={deleteRow}>
+                        <template if:false={isDeleted}>
+                            <input type="submit" name="delete" value="Delete" onclick={deleteRow}>
+                        </template>               
+                        <template if:true={isDeleted}>
+                            <input type="submit" name="undelete" value="Undelete" onclick={undeleteRow}>
+                        </template>
                     </template>
                 </p>
             </template>
