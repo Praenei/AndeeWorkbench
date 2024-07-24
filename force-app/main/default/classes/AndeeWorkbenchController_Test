@@ -38,12 +38,13 @@ private class AndeeWorkbenchController_Test {
     }
     
     /**
-     * @description Tests the GetOrgDomainUrl method
+     * @description Tests the GetSettings method
      */
     @isTest
-    static void testGetOrgDomainUrl() {
-        String url = AndeeWorkbenchController.GetOrgDomainUrl();
-        System.assertNotEquals(null, url, 'Org domain URL should not be null');
+    static void testGetSettings() {
+        AndeeWorkbenchController.SettingsWrapper settings = AndeeWorkbenchController.GetSettings();
+        System.assertNotEquals(null, settings.OrgDomainUrl, 'Org domain URL should not be null');
+        System.assertNotEquals(null, settings.UsersTimezone, 'Users timezone should not be null');
     }
     
     /**
@@ -217,5 +218,8 @@ private class AndeeWorkbenchController_Test {
         AndeeWorkbenchController.DeleteEntry(acc.Id);
         list<Account> resultAccs = [SELECT Id, Name, Industry FROM Account WHERE Name = 'Child Account'];
         system.assertEquals(0,resultAccs.size());
+        AndeeWorkbenchController.UndeleteEntry(acc.Id);
+        resultAccs = [SELECT Id, Name, Industry FROM Account WHERE Name = 'Child Account'];
+        system.assertEquals(1,resultAccs.size());
     }
 }
