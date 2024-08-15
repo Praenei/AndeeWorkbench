@@ -18,8 +18,8 @@
                     <div class="slds-col slds-has-flexi-truncate firstHeaderRow">
                         <div class="slds-media slds-no-space slds-grow">
                             <h2 class="slds-card__header-title">
-                                <span class="slds-truncate slds-m-right--xx-small" title="Workbench">
-                                    Workbench 1.0.5
+                                <span class="slds-truncate slds-m-right--xx-small" title="Workbench" onclick={zombieEasterEgg}>
+                                    Workbench 1.0.7
                                 </span>
                             </h2>
                         </div>
@@ -72,16 +72,31 @@
                                                     <label>
                                                         <input type="radio" name="query_action" value="Query" checked>
                                                         Exclude
-                                                    </label>&nbsp;
+                                                    </label><br/>
                                                     <label>
                                                         <input type="radio" name="query_action" data-id="excludeDeleted" value="QueryAll">
                                                         Include
                                                     </label>
                                                 </td>
+                                                <td valign="top" align="left">
+                                                    Date/time converter:<br>
+                                                    <label>
+                                                        <input type="radio" name="datetime_converter" value="local" data-id="localToUtc" onclick={datetimeChange}>
+                                                        Local => UTC
+                                                    </label><br/>
+                                                    <label>
+                                                        <input type="radio" name="datetime_converter" value="utc" checked onclick={datetimeChange}>
+                                                        UTC => Local
+                                                    </label><br/>
+                                                    <input type="datetime-local" data-id="datetimeIn" name="datetime"  step="1" value={convertDateTime}/>
+                                                    &nbsp;<input type="submit" name="querySubmit" value="=>" onclick={datetimeChange}/>&nbsp;
+                                                    <label data-id="convertedDatetimeId"></label>
+                                                </td>
                                             </tr>
                                         </tbody>
                                     </table>
                                 </td>
+                                            
                             </tr>
                             <tr>
                                 <td valign="top" width="1" style="margin-top:2em;">
@@ -270,7 +285,7 @@
                                                 <input type="submit" name="querySubmitBatch" value="Batch TSV" onclick={submitQueryBatch}>
                                             </td>
                                             <td>
-                                                <input type="submit" name="resync" value="Resync SOQL" onclick={resyncSoql}>
+                                                <input type="submit" name="resync" value="Resync SOQL" onclick={resyncSoql} >
                                             </td>
 
                                             <template if:true={objectValue}>
@@ -345,8 +360,13 @@
                     <input type="submit" name="back" value="Back" onclick={goBack}>
                     <input type="submit" name="update" value="Update" onclick={updateView}>
                     <template if:false={isUpdateView}>
-                        <input type="submit" name="delete" value="Delete" onclick={deleteRow}>
-                    </template>
+                        <template if:false={isDeleted}>
+                            <input type="submit" name="delete" value="Delete" onclick={deleteRow}>
+                        </template>               
+                        <template if:true={isDeleted}>
+                            <input type="submit" name="undelete" value="Undelete" onclick={undeleteRow}>
+                        </template>
+                    </template>     
                 </p>
 
                 <table id="single_row_results" class="dataTable">
@@ -380,7 +400,7 @@
                                         <td>
                                             {record.Name}
                                         </td>
-                                        <td>
+                                        <td style="border-color: white;">
                                             <input type="text" data-id="updateField" size="30" name="updateField" data-fieldname={record.Name} value={record.Value}/>
                                         </td>
                                     </tr>
@@ -396,7 +416,12 @@
                     <input type="submit" name="back" value="Back" onclick={goBack}>
                     <input type="submit" name="update" value="Update" onclick={updateView}>
                     <template if:false={isUpdateView}>
-                        <input type="submit" name="delete" value="Delete" onclick={deleteRow}>
+                        <template if:false={isDeleted}>
+                            <input type="submit" name="delete" value="Delete" onclick={deleteRow}>
+                        </template>               
+                        <template if:true={isDeleted}>
+                            <input type="submit" name="undelete" value="Undelete" onclick={undeleteRow}>
+                        </template>
                     </template>
                 </p>
             </template>
@@ -421,7 +446,7 @@
                                     <td>
                                         {record.Name}
                                     </td>
-                                    <td>
+                                    <td style="border-color: white;">
                                         <input type="text" data-id={record.Name} size="30" name="updateField" data-fieldname={record.Name} value={record.Value}/>
                                     </td>
                                 </tr>
@@ -432,7 +457,7 @@
                                         <td>
                                             {record.Name}
                                         </td>
-                                        <td>
+                                        <td style="border-color: white;">
                                             <input type="text" data-id={record.Name} size="30" name="updateField" data-fieldname={record.Name} value={record.Value}/>
                                         </td>
                                     </tr>
