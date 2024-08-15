@@ -1,0 +1,36 @@
+<template>
+    <lightning-modal-header label="Zombies">
+        
+    </lightning-modal-header>
+
+
+    <lightning-modal-body>
+        
+        <table>
+            <tr>
+                <td style="width:50%">
+                    <template if:true={gameStarted}>
+                        <div data-id="levelDisplay">Level: {level}</div>
+                        <div data-id="scoreDisplay">Score: {score}</div>
+                        <pre>{output}</pre>
+                    </template>
+                </td>
+                <td style="width:50%">
+                    0 = Player<br>
+                    █ = Wall<br>
+                    Z = Zombie<br>
+                    G = Ghost (can move thru walls)<br>
+                    $ = Gold<br>
+                    ? = Mystery (Gold or Teleport or additional Zombie/Ghost)<br>
+                    <br>
+                    Use arrow keys to move player.<br>  
+                    Collect gold to increase score.<br>  
+                    Avoid zombies and ghosts.<br>
+                    Exit maze thru the gap in outside wall and start a new level.<br>
+                    Enjoy!<br><br>
+                    <lightning-button label="Start Game" onclick={gameStart}></lightning-button>
+                </td>
+            </tr>
+        </table>    
+    </lightning-modal-body>
+</template>
