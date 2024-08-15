@@ -54,3 +54,29 @@ table.dataTable td table.dataTable {
   top: 0;
   padding: 5px;
 }
+
+
+div.scrollableContainer {
+  height: 400px; 
+  overflow: auto;
+  border: 1px solid #ccc;
+}
+
+table.scrollable {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+table.scrollable th,
+table.scrollable td {
+  border: 1px solid #ddd;
+  padding: 8px;
+  min-width: 100px; /* Adjust as needed */
+}
+
+table.scrollable thead {
+  position: sticky;
+  top: 0;
+  background-color: #f2f2f2;
+  z-index: 1;
+}

@@ -12,7 +12,11 @@ import GetSettings from '@salesforce/apex/AndeeWorkbenchController.GetSettings';
 import getSingleEntryData from '@salesforce/apex/AndeeWorkbenchController.GetSingleEntryData';
 import updateSingleEntryData from '@salesforce/apex/AndeeWorkbenchController.UpdateSingleEntryData';
 import deleteEntry from '@salesforce/apex/AndeeWorkbenchController.DeleteEntry';
+import undeleteEntry from '@salesforce/apex/AndeeWorkbenchController.UndeleteEntry';
 import insertSingleEntryData from '@salesforce/apex/AndeeWorkbenchController.InsertSingleEntryData';
+import convertTimeZone from '@salesforce/apex/AndeeWorkbenchController.ConvertTimeZone';
+
+import andeeZombie from 'c/andeeZombie';
 
 export default class AndeeWorkbench extends LightningElement {    
     // Track variables for component state
@@ -40,8 +44,11 @@ export default class AndeeWorkbench extends LightningElement {
     @track isDisplaySingleId = false;
     @track isUpdateView = false;
     @track isInsertView = false;
+    @track isDeleted = false;
+    @track isZombieGame = false;
     @track limit = "500";
     @track hideInfoDiv = false;
+    @track convertDateTime;
 
     fieldArrayLowercase = []; // contains an array of the fields for the selected object, including the field name and whether it is filterable etc     
     fieldArrayCaseSensitive = []; // Same as fieldArrayLowercase but field name is case sensitive
@@ -59,6 +66,8 @@ export default class AndeeWorkbench extends LightningElement {
     // Initialization function when component is loaded
     connectedCallback() {
         console.log('starting connectedCallback');
+
+        this.convertDateTime = new Date().toISOString().slice(0, 19).replace('T', ' ');
         // Get the organization's domain URL & the user's timezone
         GetSettings()
         .then(result => {
@@ -646,11 +655,25 @@ export default class AndeeWorkbench extends LightningElement {
         console.log('starting getSingleEntryData');
 
         this.isUpdateView = false;
+        this.isDeleted = false;
         getSingleEntryData({selectedId : recordId})
         .then(data => {
             this.rowData = [];
             this.selectedSingleRecordObject = data.ObjectApiName;
+
             this.rowData = data.Fields;
+
+            // Check if data.Fields contains iSDeleted field & if it does set this.isDeleted to true so that the undelete button appears
+            for(var i=0; i<this.rowData.length; i++){
+                if(this.rowData[i].Name == 'IsDeleted'){
+                    if(this.rowData[i].Value.toLowerCase() == 'true'){                        
+                        this.isDeleted = true;
+                    }   
+                    break;
+                }
+            }
+
+
             this.isLoading = false;
             this.error = undefined;
         
@@ -772,6 +795,7 @@ export default class AndeeWorkbench extends LightningElement {
         
     }
 
+
     deleteRow(event){
         console.log('starting deleteRow');
         this.isLoading = true;
@@ -791,12 +815,94 @@ export default class AndeeWorkbench extends LightningElement {
             console.error('error (deleteRow) => ', error); // error handling
             this.isLoading = false;
         })
+    }    
+    
+
+    undeleteRow(event){
+        console.log('starting undeleteRow');
+        this.isLoading = true;
+
+        undeleteEntry({selectedId : this.selectedSingleRecordId})
+        .then(data => {
+            this.error = undefined;
+            this.isDisplaySingleId = false;
+            this.isLoading = false;
+        })
+        .catch(error => {
+            if(error.body.fieldErrors.Name){
+                this.error = error.body.fieldErrors.Name[0].message;
+            } else {
+                this.error = 'Error occurred.  See console log for details';
+            }
+            console.error('error (undeleteRow) => ', error); // error handling
+            this.isLoading = false;
+        })
     }
+
 
     closeInfo(event){
         console.log('starting closeInfo');
         this.hideInfoDiv = true;
     }
+
+    datetimeChange(){
+
+        
+        console.log('starting datetimeChange');
+        this.isLoading = true;
+
+        this.convertDateTime = this.template.querySelector('[data-id="datetimeIn"]').value.replace('T', ' ');
+
+        const [datePart, timePart] = this.convertDateTime.split(' ');
+        const [year, month, day] = datePart.split('-');
+        const [hour, minute, second] = timePart.split(':');
+
+        if(this.template.querySelector('[data-id="localToUtc"]')){
+            const localToUtc = this.template.querySelector('[data-id="localToUtc"]').checked;
+            var fromTz = 'UTC';
+            var toTz = this.usersTimezone;
+            if(localToUtc){
+                fromTz = this.usersTimezone;
+                toTz = 'UTC';
+            }
+
+            convertTimeZone({datetimeStr : year+'-'+month+'-'+day+' '+hour+':'+minute+':'+(second===undefined?'00':second),
+                fromTz : fromTz,
+                toTz : toTz
+
+            })
+            .then(data => {
+                var returnedDatetime = data + '';
+                this.error = undefined;
+                var convertedDatetimeId = this.template.querySelector('[data-id="convertedDatetimeId"]');
+                convertedDatetimeId.innerHTML = returnedDatetime;
+                this.isLoading = false;
+            })
+            .catch(error => {
+                if(error.body.message){
+                    this.error = error.body.message;
+                } else {
+                    this.error = 'Error occurred.  See console log for details';
+                }
+                console.error('error (convertTimeZone) => ', error); // error handling
+                this.isLoading = false;
+            })
+        }
+    }
+
+    
+
+    zombieEasterEgg() {
+
+        andeeZombie.open ({
+            label: 'Zombie',
+            description: 'Play a game of zombies, try to survive the apocalypse',
+            size: 'small'
+        }).then((result) => {
+            
+        });
+    }
+
 
     get isQueryMode() {
         return !this.isDisplaySingleId && !this.isInsertView;
