@@ -417,7 +417,7 @@ public with sharing class AndeeWorkbenchController {
             objFieldsMap.put(objField.Name, objField);
         }
 
-        string query = 'SELECT ' + String.join(objFieldsMap.keyset(), ', ') + ' FROM ' + objectApiName + ' WHERE Id = \'' + selectedId + '\'';
+        string query = 'SELECT ' + String.join(objFieldsMap.keyset(), ', ') + ' FROM ' + objectApiName + ' WHERE Id = \'' + selectedId + '\' ALL ROWS';
 
 
         // Execute the query
@@ -552,6 +552,47 @@ public with sharing class AndeeWorkbenchController {
 
         delete obj;
 
+    }    
+    
+    
+    /* @method: UndeleteEntry
+     * @description: Undelete a single entry
+     * @param : id selectedId : The id of the entry to be undeleted
+    */
+    @AuraEnabled
+    public static void UndeleteEntry(id selectedId){
+        string objectApiName = selectedId.getsobjecttype().getDescribe().getName();
+        SObject obj = Schema.getGlobalDescribe().get(objectApiName).newSObject();
+        obj.Id = selectedId;
+
+        undelete obj;
+
+    }   
+    
+    
+    /* @method: ConvertTimezone
+     * @description: Convert a datetime in string form from one timezone to another
+     * @param : String dateTimeStr : Date to convert in string format e.g. '2024-07-29 11:30:00'
+     * @param : String fromTimezone : The timezone of the input date
+     * @param : String toTimezone : The timezone to convert the date to
+     * @return : String : The converted date in string format e.g. '2024-07-29T11:30:00Z'
+    */
+    @AuraEnabled
+    public static String ConvertTimeZone(String datetimeStr, String fromTz, String toTz) {
+        // Create TimeZone objects
+        TimeZone fromTimeZone = TimeZone.getTimeZone(fromTz);
+        TimeZone toTimeZone = TimeZone.getTimeZone(toTz);
+
+        // Create time as if UTC but in user's locale currency
+        Datetime dt = Datetime.valueOfGmt(datetimeStr);
+
+        // Adjust the time to remove the from timezone offet & add the to timezone offset
+        dt = dt.addSeconds(Integer.valueOf(fromTimeZone.getOffset(Datetime.now())/1000) * -1);
+        dt = dt.addSeconds(Integer.valueOf(toTimeZone.getOffset(Datetime.now())/1000));
+
+        
+        // Format the result as a string
+        return dt.format('yyyy-MM-dd HH:mm:ss', 'UTC').replace(' ', 'T') + 'Z';
     }
 
  
