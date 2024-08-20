@@ -1,40 +1,74 @@
 import { track } from 'lwc';
 import LightningModal from 'lightning/modal';
 
+import wallImage from '@salesforce/resourceUrl/zombieWall';
+import pathImage from '@salesforce/resourceUrl/zombiePath';
+import playerImage from '@salesforce/resourceUrl/zombiePlayer';
+import zombieImage from '@salesforce/resourceUrl/zombieZombie';
+import ghostImage from '@salesforce/resourceUrl/zombieGhost';
+import moneyImage from '@salesforce/resourceUrl/zombieMoney';
+import randomImage from '@salesforce/resourceUrl/zombieRandom';
+import bombImage from '@salesforce/resourceUrl/zombieBomb';
+import collisionImage from '@salesforce/resourceUrl/zombieCollision';
+import skeletonImage from '@salesforce/resourceUrl/zombieSkeleton';
+
 export default class AndeeZombie extends LightningModal {
 
     
     @track output = '';
     @track score = 0;
 	@track level = 1;
-    @track gameStarted = false;
+    @track isGameStarted = false;
+    @track isGameOver = false;
+    @track message = '';
+    @track isMessageVisible = false;
+    @track noOfBombs = 3;
+
+    wallImageUrl = wallImage;
+    pathImageUrl = pathImage;
+    playerImageUrl =  playerImage;
+    zombieImageUrl = zombieImage;
+    ghostImageUrl =  ghostImage;
+    moneyImageUrl = moneyImage;
+    randomImageUrl = randomImage;
+    bombImageUrl = bombImage;
+    collisionImageUrl = collisionImage;
+    skeletonImageUrl = skeletonImage;
 
     listenerAttached = false;
-    width = 40;
+    width = 20;
     height = 20;
     playArea = [];
-	startingNumberOfZombies=5
-	noOfWalls = 80;
-	noOfDollars = 10;
+	startingNumberOfZombies=3
+	noOfWalls = 65;
+	noOfDollars = 8;
 	noOfQuestions = 5;
-	playerChar = '0'
+	playerChar = 'P';
 	zombieChar = 'Z'
 	ghostChar = 'G'
-    wall = '█';
+    wallChar = 'W';
+    moneyChar = '$'
+    randomChar = '?'
+    bombChar = 'B';
+    collisionChar = 'C';
+    backgroundChar = ' ';
+    skeletonChar = 'D';
 	playArea2 = []; // Used to store playarea so that zombies do not remove money, ?, etc
     zombies = [];
 	ghosts = [];
+    collisions = [];
 	exitX = 0;
 	exitY = 0;
     playerX = 0;
     playerY = 0;
+    isBombDropped = false;
 
 
 
     gameStart() {
         console.log('gameStart');
-        this.gameStarted = true;
-        this.startGameDisabled = true;
+        this.isGameStarted = true;
+        this.isGameOver = false;
 
         this.score = 0;
 	    this.level = 1;
@@ -68,71 +102,70 @@ export default class AndeeZombie extends LightningModal {
         for (let y = 0; y < this.height; y++) {
           this.playArea[y] = [];
           for (let x = 0; x < this.width; x++) {
-            this.playArea[y][x] = ' ';
+            this.playArea[y][x] = this.backgroundChar;
           }
         }	  
         
-        // Add random asterisks
+        // Add random walls
         let asterisksAdded = 0;
         while (asterisksAdded < this.noOfWalls) {
-          const x = Math.floor(Math.random() * (this.width - 2)) + 1;
-          const y = Math.floor(Math.random() * (this.height - 2)) + 1;
+          const x = Math.floor(Math.random() * (this.width - 4)) + 2;
+          const y = Math.floor(Math.random() * (this.height - 4)) + 2;
   
-          if (this.playArea[y][x] === ' ') {
-            this.playArea[y][x] = this.wall;
+          if (this.playArea[y][x] === this.backgroundChar) {
+            this.playArea[y][x] = this.wallChar;
             asterisksAdded++;
           }
         }
   
         // Set the border
         for (let x = 0; x < this.width; x++) {
-          this.playArea[0][x] = this.wall;
-          this.playArea[this.height - 1][x] = this.wall;
+          this.playArea[0][x] = this.wallChar;
+          this.playArea[this.height - 1][x] = this.wallChar;
         }
         for (let y = 1; y < this.height - 1; y++) {
-          this.playArea[y][0] = this.wall;
-          this.playArea[y][this.width - 1] = this.wall;
+          this.playArea[y][0] = this.wallChar;
+          this.playArea[y][this.width - 1] = this.wallChar;
         }
         
         var rndExit = Math.random();
-        console.log(rndExit);
         if(rndExit < 0.25) {
           this.exitY = 0;
           this.exitX = Math.floor(Math.random() * (this.width - 2)) + 1;
-          if(this.playArea[this.exitY+1][this.exitX] == this.wall){
-              this.playArea[this.exitY+1][this.exitX] = ' ';
+          if(this.playArea[this.exitY+1][this.exitX] == this.wallChar){
+              this.playArea[this.exitY+1][this.exitX] = this.backgroundChar;
           }
          } else if(rndExit < 0.5) {
               this.exitY = this.height - 1;
               this.exitX = Math.floor(Math.random() * (this.width - 2)) + 1;
-              if(this.playArea[this.exitY-1][this.exitX] == this.wall){
-                  this.playArea[this.exitY-1][this.exitX] = ' ';
+              if(this.playArea[this.exitY-1][this.exitX] == this.wallChar){
+                  this.playArea[this.exitY-1][this.exitX] = this.backgroundChar;
               }
           } else if(rndExit < 0.75) {
                   this.exitY = Math.floor(Math.random() * (this.height - 2)) + 1;
                   this.exitX = 0;
-                  if(this.playArea[this.exitY][this.exitX+1] == this.wall){
-                      this.playArea[this.exitY][this.exitX+1] = ' ';
+                  if(this.playArea[this.exitY][this.exitX+1] == this.wallChar){
+                      this.playArea[this.exitY][this.exitX+1] = this.backgroundChar;
                   }
           } else {
               this.exitY = Math.floor(Math.random() * (this.height - 2)) + 1;
               this.exitX = this.width - 1;
-              if(this.playArea[this.exitY][this.exitX-1] == this.wall){
-                  this.playArea[this.exitY][this.exitX-1] = ' ';
+              if(this.playArea[this.exitY][this.exitX-1] == this.wallChar){
+                  this.playArea[this.exitY][this.exitX-1] = this.backgroundChar;
               }
           }
   
-        this.playArea[this.exitY][this.exitX] = ' '; // Remove one asterisk for the exit
+        this.playArea[this.exitY][this.exitX] = this.backgroundChar; // Remove one asterisk for the exit
   
-        // Add dollar signs ($)
+        // Add money signs
         let dollarsAdded = 0;
         while (dollarsAdded < this.noOfDollars) {
           const x = Math.floor(Math.random() * (this.width - 2)) + 1;
           const y = Math.floor(Math.random() * (this.height - 2)) + 1;
   
           if (
-            this.playArea[y][x] === ' ') {
-            this.playArea[y][x] = '$';
+            this.playArea[y][x] === this.backgroundChar) {
+            this.playArea[y][x] = this.moneyChar;
             dollarsAdded++;
           }
         }
@@ -144,8 +177,8 @@ export default class AndeeZombie extends LightningModal {
           const y = Math.floor(Math.random() * (this.height - 2)) + 1;
   
           if (
-            this.playArea[y][x] === ' ') {
-            this.playArea[y][x] = '?';
+            this.playArea[y][x] === this.backgroundChar) {
+            this.playArea[y][x] = this.randomChar;
             questionsAdded++;
           }
         }
@@ -163,14 +196,14 @@ export default class AndeeZombie extends LightningModal {
         // Add random zombies
         this.zombies.length = 0; // Clear existing zombies
         for (let i = 0; i < this.startingNumberOfZombies + Math.floor(this.score / 1000); i++) {
-          let zombieX, zombieY;
-          do {
-            zombieX = Math.floor(Math.random() * (this.width - 2)) + 1;
-            zombieY = Math.floor(Math.random() * (this.height - 2)) + 1;
-          } while (
-            this.playArea[zombieY][zombieX] !== ' ');
-          this.playArea[zombieY][zombieX] = this.zombieChar;
-          this.zombies.push({ x: zombieX, y: zombieY });
+            let zombieX, zombieY;
+            do {
+                zombieX = Math.floor(Math.random() * (this.width - 2)) + 1;
+                zombieY = Math.floor(Math.random() * (this.height - 2)) + 1;
+            } while (
+                this.playArea[zombieY][zombieX] !== this.backgroundChar);
+                this.playArea[zombieY][zombieX] = this.zombieChar;
+                this.zombies.push({ x: zombieX, y: zombieY, active: true });
         }
   
         // Set the player's initial position
@@ -179,7 +212,7 @@ export default class AndeeZombie extends LightningModal {
             this.playerX = Math.floor(Math.random() * (this.width - 2)) + 1;
             this.playerY = Math.floor(Math.random() * (this.height - 2)) + 1;
             
-            if(this.playArea[this.playerY][this.playerX] === ' '){
+            if(this.playArea[this.playerY][this.playerX] === this.backgroundChar){
               this.playArea[this.playerY][this.playerX] = this.playerChar;
               noPlayer = false;
             }
@@ -210,8 +243,17 @@ export default class AndeeZombie extends LightningModal {
         let newPos = this.getRandomDirection(this.playerX, this.playerY, zombie.x, zombie.y)
         let newX = newPos.x;
         let newY = newPos.y;
+
+        if(this.playArea[newY][newX] === this.bombChar){
+            this.playArea[zombie.y][zombie.x] = this.backgroundChar;
+            this.playArea[newY][newX] = this.collisionChar;
+            this.playArea2[newY][newX] = this.backgroundChar;
+            this.collisions.push({ x: newX, y: newY });
+            zombie.active = false;
+            return;
+        }
   
-        if (this.playArea[newY][newX] === ' ' || this.playArea[newY][newX] === '$' || this.playArea[newY][newX] === '?' || this.playArea[newY][newX] === this.playerChar) {
+        if (this.playArea[newY][newX] === this.backgroundChar || this.playArea[newY][newX] === this.moneyChar || this.playArea[newY][newX] === this.randomChar || this.playArea[newY][newX] === this.playerChar) {
           this.playArea[zombie.y][zombie.x] = this.playArea2[zombie.y][zombie.x];
           zombie.x = newX;
           zombie.y = newY;
@@ -226,8 +268,17 @@ export default class AndeeZombie extends LightningModal {
         let newPos = this.getRandomDirection(this.playerX, this.playerY, ghost.x, ghost.y)
         let newX = newPos.x;
         let newY = newPos.y;
+
+        if(this.playArea[newY][newX] === this.bombChar){
+            this.playArea[ghost.y][ghost.x] = this.backgroundChar;
+            this.playArea[newY][newX] = this.collisionChar;
+            this.playArea2[newY][newX] = this.backgroundChar;
+            this.collisions.push({ x: newX, y: newY });
+            ghost.active = false;
+            return;
+        }
   
-        if (this.playArea[newY][newX] === ' ' || this.playArea[newY][newX] === '$' || this.playArea[newY][newX] === '?' || this.playArea[newY][newX] === this.playerChar || this.playArea[newY][newX] === this.wall) {
+        if (this.playArea[newY][newX] === this.backgroundChar || this.playArea[newY][newX] === this.moneyChar || this.playArea[newY][newX] === this.randomChar || this.playArea[newY][newX] === this.playerChar || this.playArea[newY][newX] === this.wallChar) {
           this.playArea[ghost.y][ghost.x] = this.playArea2[ghost.y][ghost.x];
           ghost.x = newX;
           ghost.y = newY;
@@ -269,39 +320,55 @@ export default class AndeeZombie extends LightningModal {
     moveZombies() {
         console.log('moveZombies');
         for (const zombie of this.zombies) {
-          const dist = this.distance(zombie.x, zombie.y, this.playerX, this.playerY);
-          if (dist <= 15) {
-            this.moveZombieTowardsPlayer(zombie);
-          } else if (dist > 40) {
-            const dx = Math.floor(Math.random() * 3) - 1;
-            const dy = Math.floor(Math.random() * 3) - 1;
-            const newX = zombie.x + dx;
-            const newY = zombie.y + dy;
-  
-            if (this.playArea[newY][newX] === ' ' || this.playArea[newY][newX] === '$' || this.playArea[newY][newX] === '?' || this.playArea[newY][newX] === this.playerChar) {
-              this.playArea[zombie.y][zombie.x] = this.playArea2[zombie.y][zombie.x];
-              zombie.x = newX;
-              zombie.y = newY;
-              this.playArea[newY][newX] = this.zombieChar;
+
+            if(zombie.active==false){
+                continue;
             }
-          } else {
-            const moveTowardsPlayer = Math.random() < 0.5;
-            if (moveTowardsPlayer) {
-              this.moveZombieTowardsPlayer(zombie);
+            const dist = this.distance(zombie.x, zombie.y, this.playerX, this.playerY);
+            if (dist <= 15) {
+                this.moveZombieTowardsPlayer(zombie);
+            } else if (dist > 40) {
+                const dx = Math.floor(Math.random() * 3) - 1;
+                const dy = Math.floor(Math.random() * 3) - 1;
+                const newX = zombie.x + dx;
+                const newY = zombie.y + dy;                
+
+                if(this.playArea[newY][newX] === this.bombChar){ 
+                    this.playArea[zombie.y][zombie.x] = this.backgroundChar;                 
+                    this.playArea[newY][newX] = this.collisionChar;
+                    this.playArea2[newY][newX] = this.backgroundChar;
+                    this.collisions.push({ x: newX, y: newY });
+                    zombie.active = false;
+                } else if (this.playArea[newY][newX] === this.backgroundChar || this.playArea[newY][newX] === this.moneyChar || this.playArea[newY][newX] === this.randomChar || this.playArea[newY][newX] === this.playerChar) {
+                    this.playArea[zombie.y][zombie.x] = this.playArea2[zombie.y][zombie.x];
+                    zombie.x = newX;
+                    zombie.y = newY;
+                    this.playArea[newY][newX] = this.zombieChar;
+                }
             } else {
-              const dx = Math.floor(Math.random() * 3) - 1;
-              const dy = Math.floor(Math.random() * 3) - 1;
-              const newX = zombie.x + dx;
-              const newY = zombie.y + dy;
-  
-              if (this.playArea[newY][newX] === ' ' || this.playArea[newY][newX] === '$' || this.playArea[newY][newX] === '?' || this.playArea[newY][newX] === this.playerChar) {
-                this.playArea[zombie.y][zombie.x] = this.playArea2[zombie.y][zombie.x];
-                zombie.x = newX;
-                zombie.y = newY;
-                this.playArea[newY][newX] = this.zombieChar;
-              }
+                const moveTowardsPlayer = Math.random() < 0.5;
+                if (moveTowardsPlayer) {
+                    this.moveZombieTowardsPlayer(zombie);
+                } else {
+                    const dx = Math.floor(Math.random() * 3) - 1;
+                    const dy = Math.floor(Math.random() * 3) - 1;
+                    const newX = zombie.x + dx;
+                    const newY = zombie.y + dy;
+                    
+                    if(this.playArea[newY][newX] === this.bombChar){  
+                        this.playArea[zombie.y][zombie.x] = this.backgroundChar;                      
+                        this.playArea[newY][newX] = this.collisionChar;
+                        this.playArea2[newY][newX] = this.backgroundChar;
+                        this.collisions.push({ x: newX, y: newY });
+                        zombie.active = false;
+                    } else if (this.playArea[newY][newX] === this.backgroundChar || this.playArea[newY][newX] === this.moneyChar || this.playArea[newY][newX] === this.randomChar || this.playArea[newY][newX] === this.playerChar) {
+                        this.playArea[zombie.y][zombie.x] = this.playArea2[zombie.y][zombie.x];
+                        zombie.x = newX;
+                        zombie.y = newY;
+                        this.playArea[newY][newX] = this.zombieChar;
+                    }
+                }
             }
-          }
         }
     }
       
@@ -309,89 +376,115 @@ export default class AndeeZombie extends LightningModal {
     moveGhosts() {
         console.log('moveGhosts');
         for (const ghost of this.ghosts) {
-          this.moveGhostTowardsPlayer(ghost)
+            if(ghost.active==true){
+                this.moveGhostTowardsPlayer(ghost);
+            }
         }
     }
   
     // Handle player movement and special events
     movePlayer(dx, dy) {
         console.log('movePlayer');
+        this.message = '';
+        this.isMessageVisible = false;  
+        
+        // remove any existing collisions
+        for (const collision of this.collisions) {
+            this.playArea[collision.y][collision.x] = this.backgroundChar;
+        }
+        this.collisions.length = 0;
+
         const newX = this.playerX + dx;
         const newY = this.playerY + dy;
         this.score = this.score - 1;
 
         // Check if the new position is valid (not an asterisk)
-        if (this.playArea[newY][newX] !== this.wall) {
+        if (this.playArea[newY][newX] !== this.wallChar) {
 
-          // Clear the player's current position
-          this.playArea[this.playerY][this.playerX] = ' ';
-          this.playArea2[this.playerY][this.playerX] = ' '
-  
-          // Update the player's position
-          this.playerX = newX;
-          this.playerY = newY;
-  
-          // Handle special events
-          if (this.playArea[this.playerY][this.playerX] === '$') {
-            this.score += 100;
-          } else if (this.playArea[this.playerY][this.playerX] === '?') {
-            const randomEvent = Math.floor(Math.random() * 3);
-            switch (randomEvent) {
-              case 0:
-                this.score += 100;
-                break;
-              case 1:
-                let ghostX, ghostY;
-                do {
-                  ghostX = Math.floor(Math.random() * (this.width - 2)) + 1;
-                  ghostY = Math.floor(Math.random() * (this.height - 2)) + 1;
-                } while (
-                  this.playArea[ghostY][ghostX] !== ' '
-                );
-                this.playArea[ghostY][ghostX] = this.ghostChar;
-                this.ghosts.push({ x: ghostX, y: ghostY });
-                break;
-              case 2:
-                let newPlayerX, newPlayerY;
-                do {
-                  newPlayerX = Math.floor(Math.random() * (this.width - 2)) + 1;
-                  newPlayerY = Math.floor(Math.random() * (this.height - 2)) + 1;
-                } while (
-                  this.playArea[newPlayerY][newPlayerX] !== ' '
-                );
-                this.playArea[this.playerY][this.playerX] = ' ';
-                this.playerX = newPlayerX;
-                this.playerY = newPlayerY;
-                break;
+            // If a bomb was previously placed, mark it on the maze
+            if(this.isBombDropped){
+                this.isBombDropped = false;
+                this.playArea[this.playerY][this.playerX] = this.bombChar;
+            } else {
+                // Clear the player's current position
+                this.playArea[this.playerY][this.playerX] = this.backgroundChar;
+                this.playArea2[this.playerY][this.playerX] = this.backgroundChar;
             }
-            this.playArea[this.playerY][this.playerX] = ' ';
-          }
-  
-          // Set the player's new position
-          this.playArea[this.playerY][this.playerX] = this.playerChar;
+    
+            // Update the player's position
+            this.playerX = newX;
+            this.playerY = newY;
+    
+            // Handle special events
+            if (this.playArea[this.playerY][this.playerX] === this.moneyChar) {
+                this.score += 100;
+            } else if (this.playArea[this.playerY][this.playerX] === this.randomChar) {
+                this.isMessageVisible = true;
+                const randomEvent = Math.floor(Math.random() * 4);
+                switch (randomEvent) {
+                case 0:
+                    this.message = 'You found hidden gold!';
+                    this.score += 100;
+                    break;
+                case 1:
+                    this.message = 'Oops, you have woken a ghost!';
+                    let ghostX, ghostY;
+                    do {
+                    ghostX = Math.floor(Math.random() * (this.width - 2)) + 1;
+                    ghostY = Math.floor(Math.random() * (this.height - 2)) + 1;
+                    } while (
+                    this.playArea[ghostY][ghostX] !== this.backgroundChar
+                    );
+                    this.playArea[ghostY][ghostX] = this.ghostChar;
+                    this.ghosts.push({ x: ghostX, y: ghostY, active: true });
+                    break;
+                case 2:
+                    this.message = 'Teleport time!';
+                    let newPlayerX, newPlayerY;
+                    do {
+                    newPlayerX = Math.floor(Math.random() * (this.width - 2)) + 1;
+                    newPlayerY = Math.floor(Math.random() * (this.height - 2)) + 1;
+                    } while (
+                    this.playArea[newPlayerY][newPlayerX] !== this.backgroundChar
+                    );
+                    this.playArea[this.playerY][this.playerX] = this.backgroundChar;
+                    this.playerX = newPlayerX;
+                    this.playerY = newPlayerY;
+                    break;
+                case 3:
+                    this.message = 'You found a bomb!';
+                    this.noOfBombs++;
+                    break;
+                }
+                this.playArea[this.playerY][this.playerX] = this.backgroundChar;
+            }
+    
+            // Set the player's new position
+            this.playArea[this.playerY][this.playerX] = this.playerChar;
         }
         // Check if player reached the exit
         console.log(this.playerY +'='+ this.exitY +', '+ this.playerX +'='+ this.exitX);
         if (this.playerY === this.exitY && this.playerX === this.exitX) {
-          this.score += 100;
-          this.updateLevelDisplay();
-          this.startingNumberOfZombies++;
-          this.initializePlayArea(); // Regenerate play area with one additional zombie
+            this.score += 100;
+            this.updateLevelDisplay();
+            this.startingNumberOfZombies++;
+            this.initializePlayArea(); // Regenerate play area with one additional zombie
         } else {
         
-          // Check for game over
-          if(this.isCaught(this.playerY, this.playerX)){
-              return;
-          }
-        
-          // Move zombies
-          this.moveZombies();
-          this.moveGhosts();
-  
-          
-          if(this.isCaught(this.playerY, this.playerX)){
-              return;
-          }
+            // Check for game over
+            if(this.isCaught(this.playerY, this.playerX)){
+                return;
+            }
+            
+            // Move zombies
+            this.moveZombies();
+            this.moveGhosts();
+    
+            
+            if(this.isCaught(this.playerY, this.playerX)){
+                this.renderPlayArea();
+                return;
+            }
         }
         this.renderPlayArea();
         
@@ -400,16 +493,20 @@ export default class AndeeZombie extends LightningModal {
     isCaught(){
         console.log('isCaught');
         for (const zombie of this.zombies) {
-            if (zombie.x === this.playerX && zombie.y === this.playerY) {
-              alert('Game Over');
-              return true;
+            if (zombie.x === this.playerX && zombie.y === this.playerY && zombie.active) {
+                this.playArea[this.playerY][this.playerX] = this.skeletonChar;
+                
+                this.isGameOver = true;
+                return true;
             }
         }
           
         for (const ghost of this.ghosts) {
-            if (ghost.x === this.playerX && ghost.y === this.playerY) {
-              alert('Game Over');
-              return true;
+            if (ghost.x === this.playerX && ghost.y === this.playerY && ghost.active) {
+                this.playArea[this.playerY][this.playerX] = this.skeletonChar;              
+
+                this.isGameOver = true;
+                return true;
             }
         }
           
@@ -418,19 +515,75 @@ export default class AndeeZombie extends LightningModal {
     // Keyboard event listeners
     handleKeyDown(event) {
         console.log('handleKeyDown');
-        switch (event.key) {
-          case 'ArrowUp':
-            this.movePlayer(0, -1); // Move up
-            break;
-          case 'ArrowDown':
-            this.movePlayer(0, 1); // Move down
-            break;
-          case 'ArrowLeft':
-            this.movePlayer(-1, 0); // Move left
-            break;
-          case 'ArrowRight':
-            this.movePlayer(1, 0); // Move right
-            break;
+        if(this.isGameOver == true || this.isGameStarted == false){
+            return;
         }
+
+        switch (event.key) {
+            case 'ArrowUp':
+                this.movePlayer(0, -1); // Move up
+                break;
+            case 'ArrowDown':
+                this.movePlayer(0, 1); // Move down
+                break;
+            case 'ArrowLeft':
+                this.movePlayer(-1, 0); // Move left
+                break;
+            case 'ArrowRight':
+                this.movePlayer(1, 0); // Move right
+                break;
+            case 'b':
+                if(this.noOfBombs > 0){
+                    this.placeBomb();
+                }
+                break;
+        }
+    }
+
+    placeBomb(){
+        console.log('placeBomb');
+        this.isBombDropped = true;
+        this.message = 'Bomb placed!';
+        this.noOfBombs--;
+        this.isMessageVisible = true;
+    }
+
+    get mazeRows() {
+        console.log('mazeRows');
+        let rows = [];
+
+        let rowSplit = this.output.split('\n');
+        for (let i = 0; i < rowSplit.length; i++) {
+            let row = rowSplit[i];
+            let rowArray = [];
+            for (let j = 0; j < row.length; j++) {
+                let char = row[j];
+                let isWall = char === this.wallChar;
+                let isPath = char === this.backgroundChar;
+                let isPlayer = char === this.playerChar;
+                let isZombie = char === this.zombieChar;
+                let isGhost = char === this.ghostChar;
+                let isMoney = char === this.moneyChar;
+                let isRandom = char === this.randomChar;
+                let isBomb = char === this.bombChar;
+                let isCollision = char === this.collisionChar;
+                let isSkeleton = char === this.skeletonChar;
+                rowArray.push({
+                    isWall: isWall,
+                    isPath: isPath,
+                    isPlayer: isPlayer,
+                    isZombie: isZombie,
+                    isGhost: isGhost,
+                    isMoney: isMoney,
+                    isRandom: isRandom,
+                    isBomb: isBomb,
+                    isCollision: isCollision,
+                    isSkeleton: isSkeleton
+                });
+            }
+            rows.push(rowArray);
+        }
+
+        return rows;
     }
 }

@@ -1,0 +1,13 @@
+.maze-container {
+    display: inline-block;
+}
+
+.maze-row {
+    display: flex;
+}
+
+.maze-cell {
+    width: 16px;  /* Adjust based on your image size */
+    height: 16px; /* Adjust based on your image size */
+    display: block;
+}
