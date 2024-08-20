@@ -224,13 +224,21 @@ private class AndeeWorkbenchController_Test {
     }   
     
     /**
-     * @description Tests the DeleteEntry method
+     * @description Tests the testConvertTimeZoneFromUtc method
      */
     @isTest
     static void testConvertTimeZone() {
-        system.assertEquals('2024-06-01T12:00:00Z', AndeeWorkbenchController.ConvertTimeZone('2024-06-01 11:00:00', 'UTC', 'Europe/London'));
-        system.assertEquals('2024-06-01T10:00:00Z', AndeeWorkbenchController.ConvertTimeZone('2024-06-01 11:00:00', 'Europe/London', 'UTC'));
-        system.assertEquals('2024-06-01T05:59:59Z', AndeeWorkbenchController.ConvertTimeZone('2024-06-01 00:59:59', 'America/New_York', 'Europe/London'));
-        system.assertEquals('2024-05-31T19:00:00Z', AndeeWorkbenchController.ConvertTimeZone('2024-06-01 00:00:00', 'Europe/London', 'America/New_York'));
+
+        // +1 as daylight saving (BST)
+        system.assertEquals('2024-06-01T12:00:00Z', AndeeWorkbenchController.ConvertTimeZoneFromUtc('2024-06-01 11:00:00', 'Europe/London'));
+
+        // same as GMT
+        system.assertEquals('2024-12-01T11:00:00Z', AndeeWorkbenchController.ConvertTimeZoneFromUtc('2024-12-01 11:00:00', 'Europe/London'));
+
+        // -4 as -5 timezone +1 for daylight saving
+        system.assertEquals('2024-05-31T21:59:59Z', AndeeWorkbenchController.ConvertTimeZoneFromUtc('2024-06-01 01:59:59', 'America/New_York'));
+        
+        // -5 as -5 timezone
+        system.assertEquals('2024-12-31T17:00:00Z', AndeeWorkbenchController.ConvertTimeZoneFromUtc('2024-12-31 22:00:00', 'America/New_York'));
     }
 }
