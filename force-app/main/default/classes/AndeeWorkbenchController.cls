@@ -10,6 +10,9 @@ public with sharing class AndeeWorkbenchController {
 
     private static map<string, string> fieldTypeMap = new map<string, string>();
 
+    public static final String DATETIME_PATTERN = '^(\\d{4})-(?:(0[1-9])|(1[0-2]))-((?:0[1-9])|(?:[12]\\d)|(?:3[01])) ((?:[01]\\d)|(?:2[0-3])):([0-5]\\d):([0-5]\\d)$';
+   
+
     /* @method: GetSettings
      * @description:  Get the Org Domain URL & user's Timezone
      * @return : SettingsWrapper : OrgDomainUrl + UsersTimezone
@@ -287,6 +290,9 @@ public with sharing class AndeeWorkbenchController {
         // Execute the query
         List<SObject> queryResults = Database.query(query);
 
+        // Create a reg.exp pattern for datetime format
+        Pattern p = Pattern.compile(DATETIME_PATTERN);
+
         String csvOutput = String.join(fields, '\t') + '\n';
         String fileRow = '';
 
@@ -320,7 +326,18 @@ public with sharing class AndeeWorkbenchController {
                         fileRow += '\t';
                     }
                     // Handle fields on the main object
-                    fileRow += (obj.get(field)==null)?'':string.valueOf(obj.get(field));
+
+                    if(obj.get(field) == null){
+                        fileRow += '';
+                    } else {
+                        // Check if in datetime format e.g. 2024-08-31 11:30:00
+                        Matcher m = p.matcher(String.valueOf(obj.get(field)));
+                        if(m.find()){
+                            fileRow += ConvertTimezoneFromUtc(String.valueOf(obj.get(field)), UserInfo.getTimeZone().getID());
+                        } else {
+                            fileRow += string.valueOf(obj.get(field));
+                        }
+                    }
                 }
             }
             csvOutput += fileRow + '\n';
@@ -577,7 +594,7 @@ public with sharing class AndeeWorkbenchController {
      * @param : String toTimezone : The timezone to convert the date to
      * @return : String : The converted date in string format e.g. '2024-07-29T11:30:00Z'
     */
-    @AuraEnabled
+    /*@AuraEnabled
     public static String ConvertTimeZone(String datetimeStr, String fromTz, String toTz) {
         // Create TimeZone objects
         TimeZone fromTimeZone = TimeZone.getTimeZone(fromTz);
@@ -593,6 +610,46 @@ public with sharing class AndeeWorkbenchController {
         
         // Format the result as a string
         return dt.format('yyyy-MM-dd HH:mm:ss', 'UTC').replace(' ', 'T') + 'Z';
+    } */ 
+    
+    
+    /* @method: ConvertTimezoneFromUtc
+     * @description: Convert a datetime in string form from one timezone to another
+     * @param : String dateTimeStr : Date to convert in string format e.g. '2024-07-29 11:30:00'
+     * @param : String toTz : The timezone to convert the date to
+     * @return : String : The converted date in string format e.g. '2024-07-29T11:30:00Z'
+    */
+    public static String ConvertTimezoneFromUtc(String datetimeStr, String toTz) {
+        // Extract the date & time parts
+        Pattern p = Pattern.compile(DATETIME_PATTERN);
+        Matcher matcher = p.matcher(datetimeStr);
+        if(!matcher.find()){
+            return datetimeStr;
+        }
+        String year = matcher.group(1);
+        String month = matcher.group(2) != null ? matcher.group(2) : matcher.group(3);
+        String day = matcher.group(4);
+        String hour = matcher.group(5);
+        String minute = matcher.group(6);
+        String second = matcher.group(7);
+
+        // Construct as GMT
+        DateTime gmtTime = DateTime.newInstanceGmt(
+            Integer.valueOf(year),
+            Integer.valueOf(month),
+            Integer.valueOf(day),
+            Integer.valueOf(hour),
+            Integer.valueOf(minute),
+            Integer.valueOf(second)
+        );
+        // Get desired time zone
+        TimeZone tz = TimeZone.getTimeZone(toTz);
+
+        // getOffset returns the value in ms, we need it in seconds.
+        DateTime localTime = gmtTime.addSeconds(tz.getOffset(gmtTime)/1000);
+        
+        // Format the result as a string
+        return localTime.yearGmt() + '-' + ('0' + localTime.monthGmt()).right(2) + '-' + ('0' + localTime.dayGmt()).right(2) + 'T' + ('0' + localTime.hourGmt()).right(2) + ':' + ('0' + localTime.minuteGmt()).right(2) + ':' + ('0' + localTime.secondGmt()).right(2) + 'Z';
     }
 
  
