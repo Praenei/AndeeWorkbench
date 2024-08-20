@@ -5,25 +5,110 @@
 
 
     <lightning-modal-body>
+
+        <template if:true={isGameOver}>
+            <div >
+                <div class="slds-notify slds-notify--alert slds-theme--error slds-theme--alert-texture" role="alert" >
+                Game Over! Score: {score}
+                </div>
+            </div>
+        </template>
+
+        <template if:true={isMessageVisible}>
+            <div >
+                <div class="slds-notify slds-notify--alert slds-theme--alert-texture" role="alert" >
+                {message}
+                </div>
+            </div>
+        </template>
         
         <table>
             <tr>
-                <td style="width:50%">
-                    <template if:true={gameStarted}>
-                        <div data-id="levelDisplay">Level: {level}</div>
-                        <div data-id="scoreDisplay">Score: {score}</div>
-                        <pre>{output}</pre>
+                <td style="width:60%">
+                    <template if:true={isGameStarted}>
+                        <div data-id="scoreDisplay">Score: {score} (Level: {level})</div>
+                        <div data-id="bombs">Remaining Bombs: {noOfBombs}</div>
+                        <div class="maze-container">
+                            <template for:each={mazeRows} for:item="row">
+                                <div key={row} class="maze-row">
+                                    <template for:each={row} for:item="cell">
+                                        <template if:true={cell.isWall}>
+                                            <img key={cell} 
+                                                 src={wallImageUrl} 
+                                                 alt="Wall"
+                                                 class="maze-cell">
+                                        </template>
+                                        <template if:true={cell.isPath}>
+                                            <img key={cell} 
+                                                 src={pathImageUrl} 
+                                                 alt="Path"
+                                                 class="maze-cell">
+                                        </template>
+                                        <template if:true={cell.isPlayer}>
+                                            <img key={cell} 
+                                                 src={playerImageUrl} 
+                                                 alt="Player"
+                                                 class="maze-cell">
+                                        </template>
+                                        <template if:true={cell.isZombie}>
+                                            <img key={cell} 
+                                                 src={zombieImageUrl} 
+                                                 alt="Zombie"
+                                                 class="maze-cell">
+                                        </template>
+                                        <template if:true={cell.isGhost}>
+                                            <img key={cell} 
+                                                 src={ghostImageUrl} 
+                                                 alt="Ghost"
+                                                 class="maze-cell">
+                                        </template>
+                                        <template if:true={cell.isMoney}>
+                                            <img key={cell} 
+                                                 src={moneyImageUrl} 
+                                                 alt="Money"
+                                                 class="maze-cell">
+                                        </template>
+                                        <template if:true={cell.isRandom}>
+                                            <img key={cell} 
+                                                 src={randomImageUrl} 
+                                                 alt="Random"
+                                                 class="maze-cell">
+                                        </template>
+                                        <template if:true={cell.isBomb}>
+                                            <img key={cell} 
+                                                 src={bombImageUrl} 
+                                                 alt="Bomb"
+                                                 class="maze-cell">
+                                        </template>
+                                        <template if:true={cell.isCollision}>
+                                            <img key={cell} 
+                                                 src={collisionImageUrl} 
+                                                 alt="Collision"
+                                                 class="maze-cell">
+                                        </template>
+                                        <template if:true={cell.isSkeleton}>
+                                            <img key={cell} 
+                                                 src={skeletonImageUrl} 
+                                                 alt="Skeleton"
+                                                 class="maze-cell">
+                                        </template>
+                                    </template>
+                                </div>
+                            </template>
+                        </div>
                     </template>
                 </td>
-                <td style="width:50%">
-                    0 = Player<br>
-                    █ = Wall<br>
-                    Z = Zombie<br>
-                    G = Ghost (can move thru walls)<br>
-                    $ = Gold<br>
-                    ? = Mystery (Gold or Teleport or additional Zombie/Ghost)<br>
+                <td style="width:40%">
+                    😨 = Player<br>
+                    🧱 = Wall<br>
+                    🧟‍♂️ = Zombie<br>
+                    👻 = Ghost (can move thru walls)<br>
+                    💰 = Gold<br>
+                    💣 = Bomb<br>
+                    ❓ = Mystery (Gold or Teleport or Ghost or Bomb)<br>
                     <br>
-                    Use arrow keys to move player.<br>  
+                    Use arrow keys to move player.<br>
+                    Drop a bomb with 'b'.<br>
                     Collect gold to increase score.<br>  
                     Avoid zombies and ghosts.<br>
                     Exit maze thru the gap in outside wall and start a new level.<br>
