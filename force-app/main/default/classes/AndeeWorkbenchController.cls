@@ -68,6 +68,7 @@ public with sharing class AndeeWorkbenchController {
             if ( fieldResult.isAccessible() ) {  
                 FieldWrapper fw = new FieldWrapper();
                 fw.Name = fieldResult.getName();
+                fw.Label = fieldResult.getLabel();
                 fw.Type = fieldResult.getType().name();
                 fw.Filterable = fieldResult.isFilterable();
                 fw.Groupable = fieldResult.isGroupable();
@@ -659,6 +660,9 @@ public with sharing class AndeeWorkbenchController {
         
         @AuraEnabled
         public String Name;
+        
+        @AuraEnabled
+        public String Label;
         
         @AuraEnabled
         public String Type;
