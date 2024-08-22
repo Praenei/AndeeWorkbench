@@ -14,7 +14,7 @@ import updateSingleEntryData from '@salesforce/apex/AndeeWorkbenchController.Upd
 import deleteEntry from '@salesforce/apex/AndeeWorkbenchController.DeleteEntry';
 import undeleteEntry from '@salesforce/apex/AndeeWorkbenchController.UndeleteEntry';
 import insertSingleEntryData from '@salesforce/apex/AndeeWorkbenchController.InsertSingleEntryData';
-import convertTimeZone from '@salesforce/apex/AndeeWorkbenchController.ConvertTimeZone';
+//import convertTimeZone from '@salesforce/apex/AndeeWorkbenchController.ConvertTimeZone';
 
 import andeeZombie from 'c/andeeZombie';
 
@@ -49,6 +49,7 @@ export default class AndeeWorkbench extends LightningElement {
     @track limit = "500";
     @track hideInfoDiv = false;
     @track convertDateTime;
+    @track isShowApiFieldNames = true;
 
     fieldArrayLowercase = []; // contains an array of the fields for the selected object, including the field name and whether it is filterable etc     
     fieldArrayCaseSensitive = []; // Same as fieldArrayLowercase but field name is case sensitive
@@ -62,6 +63,8 @@ export default class AndeeWorkbench extends LightningElement {
     usersTimezone = "";
 
     chainOfSingleRowIds = []; // Used to control where the user goes after hitting the back button e.g. previous single row data or query
+
+    
 
     // Initialization function when component is loaded
     connectedCallback() {
@@ -845,7 +848,16 @@ export default class AndeeWorkbench extends LightningElement {
         this.hideInfoDiv = true;
     }
 
-    datetimeChange(){
+    toggleShowApiFieldNames(event){
+        console.log('starting toggleShowApiFieldNames');
+        this.isShowApiFieldNames = !this.isShowApiFieldNames;
+        // Force update of rowData
+        const tempRowData = this.rowData;
+        this.rowData = [];
+        this.rowData = tempRowData;
+    }
+
+    /*datetimeChange(){
 
         
         console.log('starting datetimeChange');
@@ -888,7 +900,7 @@ export default class AndeeWorkbench extends LightningElement {
                 this.isLoading = false;
             })
         }
-    }
+    }*/
 
     
 
