@@ -472,7 +472,8 @@ export default class AndeeZombie extends LightningModal {
         } else {
         
             // Check for game over
-            if(this.isCaught(this.playerY, this.playerX)){
+            if(this.isCaught(this.playerY, this.playerX)){                
+                this.renderPlayArea();
                 return;
             }
             
