@@ -19,7 +19,7 @@
                         <div class="slds-media slds-no-space slds-grow">
                             <h2 class="slds-card__header-title">
                                 <span class="slds-truncate slds-m-right--xx-small" title="Workbench" onclick={zombieEasterEgg}>
-                                    Workbench 1.0.7
+                                    Workbench 1.0.8
                                 </span>
                             </h2>
                         </div>
@@ -41,9 +41,7 @@
                         <div class="closeInfoIcon">
                             <lightning-icon icon-name='utility:close' alternative-text='close' variant='inverse' size='xx-small' title='close' onclick={closeInfo}></lightning-icon>
                         </div>
-                        Please note that all date/times are in UTC/GMT
-                        <br/>
-                        This is also an early release so where possible please double check the results
+                        This is an early release so where possible please double check the results and report any issues to the dev.team
                     </div>
                 </div>
             </template>
@@ -78,7 +76,7 @@
                                                         Include
                                                     </label>
                                                 </td>
-                                                <td valign="top" align="left">
+                                                <!--<td valign="top" align="left">
                                                     Date/time converter:<br>
                                                     <label>
                                                         <input type="radio" name="datetime_converter" value="local" data-id="localToUtc" onclick={datetimeChange}>
@@ -91,7 +89,7 @@
                                                     <input type="datetime-local" data-id="datetimeIn" name="datetime"  step="1" value={convertDateTime}/>
                                                     &nbsp;<input type="submit" name="querySubmit" value="=>" onclick={datetimeChange}/>&nbsp;
                                                     <label data-id="convertedDatetimeId"></label>
-                                                </td>
+                                                </td>-->
                                             </tr>
                                         </tbody>
                                     </table>
@@ -356,6 +354,9 @@
             <template if:true={isDisplaySingleId}>
                 Single Id Display : {selectedSingleRecordId} for Object : {selectedSingleRecordObject}
 
+                <template if:false={isUpdateView}>
+                    <lightning-input type="toggle" label="Show API field names" name="showApiFieldNames" message-toggle-active='' message-toggle-inactive='' style="margin-top:5px; margin-bottom:5px;" checked={isShowApiFieldNames} onchange={toggleShowApiFieldNames}></lightning-input>
+                </template>
                 <p>
                     <input type="submit" name="back" value="Back" onclick={goBack}>
                     <input type="submit" name="update" value="Update" onclick={updateView}>
@@ -376,10 +377,20 @@
                                 <tr key={record.Name} class="highlight-row">
                                     <td>
                                         <template if:true={record.Updatable}>
-                                            <b>{record.Name}</b>
+                                            <template if:true={isShowApiFieldNames}>
+                                                <b>{record.Name}</b>
+                                            </template>
+                                            <template if:false={isShowApiFieldNames}>
+                                                <b>{record.Label}</b>
+                                            </template>
                                         </template>
                                         <template if:false={record.Updatable}>
-                                            {record.Name}
+                                            <template if:true={isShowApiFieldNames}>
+                                                {record.Name}
+                                            </template>
+                                            <template if:false={isShowApiFieldNames}>
+                                                {record.Label}
+                                            </template>
                                         </template>
                                     </td>
                                     
