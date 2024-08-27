@@ -26,20 +26,23 @@ public with sharing class AndeeWorkbenchController {
     }
     
     /* @method: GetAllObjects
-     * @description:  Get a sorted list of all objects in the org
-     * @return : list<string> sorted list of API object names
+     * @description:  Get a list of all objects in the org
+     * @return : list<string>  list of API object api names & labels
     */
     @AuraEnabled(cacheable=true)
-    public static list<string> GetAllObjects() {
+    public static list<ObjectWrapper> GetAllObjects() {
 
-        list<string> allObjects = new list<string>();
+        list<ObjectWrapper> allObjects = new list<ObjectWrapper>();
         List < Schema.SObjectType > gd = Schema.getGlobalDescribe().Values(); 
         Map<String , Schema.SObjectType > globalDescription = Schema.getGlobalDescribe();   
 
         for ( Schema.SObjectType f : gd ) { 
-            allObjects.add(f.getDescribe().getName()); 
+            ObjectWrapper ow = new ObjectWrapper();
+            ow.ApiName = f.getDescribe().getName();
+            ow.Label = f.getDescribe().getLabel();
+            allObjects.add(ow); 
         }
-        allObjects.sort();
+        //allObjects.sort();
         return allObjects;
 
     }
@@ -654,6 +657,15 @@ public with sharing class AndeeWorkbenchController {
     }
 
  
+
+    public class ObjectWrapper{
+        
+        @AuraEnabled
+        public String ApiName;
+        
+        @AuraEnabled
+        public String Label;
+    }
 
 
     public class FieldWrapper{
