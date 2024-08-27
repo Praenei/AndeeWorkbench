@@ -52,9 +52,21 @@ private class AndeeWorkbenchController_Test {
      */
     @isTest
     static void testGetAllObjects() {
-        List<String> objects = AndeeWorkbenchController.GetAllObjects();
-        System.assert(objects.contains('Account'), 'Account should be in the list of objects');
-        System.assert(objects.contains('Contact'), 'Contact should be in the list of objects');
+        List<AndeeWorkbenchController.ObjectWrapper> objects = AndeeWorkbenchController.GetAllObjects();
+
+        set<String> objectLabels = new set<String>();
+        set<String> objectApiNames = new set<String>();
+
+        for (AndeeWorkbenchController.ObjectWrapper obj : objects) {
+            objectLabels.add(obj.Label);
+            objectApiNames.add(obj.ApiName);
+        }
+
+        System.assert(objectApiNames.contains('Account'), 'Account should be in the list of the api names of objects');
+        System.assert(objectApiNames.contains('Contact'), 'Contact should be in the list of the api names of objects');
+
+        System.assert(objectLabels.contains('Client/Third-Party'), 'Account should be in the list the labels of objects');
+        System.assert(objectLabels.contains('Contact'), 'Contact should be in the list the labels of objects');
     }
     
     /**
