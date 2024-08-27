@@ -19,7 +19,7 @@
                         <div class="slds-media slds-no-space slds-grow">
                             <h2 class="slds-card__header-title">
                                 <span class="slds-truncate slds-m-right--xx-small" title="Workbench" onclick={zombieEasterEgg}>
-                                    Workbench 1.0.8
+                                    Workbench 1.0.9
                                 </span>
                             </h2>
                         </div>
@@ -52,6 +52,9 @@
                         <tbody>
                             <tr>
                                 <td valign="top" width="1" style="margin-top:2em;">
+
+                                    <lightning-input type="toggle" label="Show API object names" name="showApiObjectNames" message-toggle-active='' message-toggle-inactive='' style="margin-top:5px; margin-bottom:5px;" checked={isShowApiObjectNames} onchange={toggleShowApiObjectNames}></lightning-input>
+
                                     Object:<br/>
                                     <select data-id="objectSelect" id="objectSelect" style="width: 16em" onchange={objectChanged}>
                                         <template for:each={objectOptions} for:item="oo" for:index="index">

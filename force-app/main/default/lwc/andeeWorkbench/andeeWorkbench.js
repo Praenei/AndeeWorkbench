@@ -50,6 +50,9 @@ export default class AndeeWorkbench extends LightningElement {
     @track hideInfoDiv = false;
     @track convertDateTime;
     @track isShowApiFieldNames = true;
+    @track isShowApiObjectNames = true;
+
+    allObjects = []; // contains an array of all the objects in the Salesforce instance (ApiName + Label)
 
     fieldArrayLowercase = []; // contains an array of the fields for the selected object, including the field name and whether it is filterable etc     
     fieldArrayCaseSensitive = []; // Same as fieldArrayLowercase but field name is case sensitive
@@ -93,11 +96,13 @@ export default class AndeeWorkbench extends LightningElement {
             // Transform data into options for the object select dropdown
             var returnOpts = [];
             returnOpts = [ ...returnOpts, {label: '--None--', value: ''} ];
-            var allValues = data;
-            for (var i = 0; i < allValues.length; i++) {
-                returnOpts = [ ...returnOpts, {label: allValues[i], value: allValues[i]} ];
+            this.allObjects = data;
+            for (var i = 0; i < this.allObjects.length; i++) {
+                returnOpts = [ ...returnOpts, {label: this.allObjects[i].ApiName, value: this.allObjects[i].ApiName} ];
             }
 
+            // sort returnOpts by label
+            returnOpts.sort((a, b) => (a.label > b.label) ? 1 : -1);
             this.objectOptions = returnOpts;
             this.isLoading = false;
         } else if (error) {
@@ -855,6 +860,24 @@ export default class AndeeWorkbench extends LightningElement {
         const tempRowData = this.rowData;
         this.rowData = [];
         this.rowData = tempRowData;
+    }    
+
+    toggleShowApiObjectNames(event){
+        console.log('starting toggleShowApiObjectNames');
+        this.isShowApiObjectNames = !this.isShowApiObjectNames;
+        var returnOpts = [];
+        returnOpts = [ ...returnOpts, {label: '--None--', value: ''} ];
+        for (var i = 0; i < this.allObjects.length; i++) {
+            if( this.isShowApiObjectNames){
+                returnOpts = [ ...returnOpts, {label: this.allObjects[i].ApiName, value: this.allObjects[i].ApiName} ];
+            } else {
+                returnOpts = [ ...returnOpts, {label: this.allObjects[i].Label + ' (' + this.allObjects[i].ApiName + ')', value: this.allObjects[i].ApiName} ];
+            }
+        }
+        // sort returnOpts by label
+        returnOpts.sort((a, b) => (a.label > b.label) ? 1 : -1);
+        this.objectOptions = returnOpts;
+
     }
 
     /*datetimeChange(){
