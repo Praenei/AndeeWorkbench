@@ -49,8 +49,8 @@ export default class AndeeWorkbench extends LightningElement {
     @track limit = "500";
     @track hideInfoDiv = false;
     @track convertDateTime;
-    @track isShowApiFieldNames = true;
-    @track isShowApiObjectNames = true;
+    @track isShowFieldLabels = false;
+    @track isShowObjectLabels = false;
 
     allObjects = []; // contains an array of all the objects in the Salesforce instance (ApiName + Label)
 
@@ -735,12 +735,16 @@ export default class AndeeWorkbench extends LightningElement {
             
             })
             .catch(error => {
-                if(error.body.fieldErrors.Name){
-                    this.error = error.body.fieldErrors.Name[0].message;
-                } else {
-                    this.error = 'Error occurred.  See console log for details';
-                }
                 console.error('error (updateView) => ', error); // error handling
+                if(error.body && error.body.fieldErrors && error.body.fieldErrors.Name){
+                    this.error = error.body.fieldErrors.Name[0].message;
+                } else  if(error.body && error.body.pageErrors){
+                    this.error = error.body.pageErrors[0].message;
+                } else if(error.body && error.body.message){
+                    this.error = error.body.message;
+                } else {
+                    this.error = 'Error occurred.  See console log for more details';
+                }
                 this.isLoading = false;
             })
 
@@ -792,12 +796,16 @@ export default class AndeeWorkbench extends LightningElement {
             this.isLoading = false;
         })
         .catch(error => {
-            if(error.body.fieldErrors.Name){
-                this.error = error.body.fieldErrors.Name[0].message;
-            } else {
-                this.error = 'Error occurred.  See console log for details';
-            }
             console.error('error (insertSingleEntryData) => ', error); // error handling
+            if(error.body && error.body.fieldErrors && error.body.fieldErrors.Name){
+                this.error = error.body.fieldErrors.Name[0].message;
+            } else  if(error.body && error.body.pageErrors){
+                this.error = error.body.pageErrors[0].message;
+            } else if(error.body && error.body.message){
+                this.error = error.body.message;
+            } else {
+                this.error = 'Error occurred.  See console log for more details';
+            }
             this.isLoading = false;
         })
         
@@ -853,25 +861,25 @@ export default class AndeeWorkbench extends LightningElement {
         this.hideInfoDiv = true;
     }
 
-    toggleShowApiFieldNames(event){
-        console.log('starting toggleShowApiFieldNames');
-        this.isShowApiFieldNames = !this.isShowApiFieldNames;
+    toggleShowFieldLabels(event){
+        console.log('starting toggleShowFieldLabels');
+        this.isShowFieldLabels = !this.isShowFieldLabels;
         // Force update of rowData
         const tempRowData = this.rowData;
         this.rowData = [];
         this.rowData = tempRowData;
     }    
 
-    toggleShowApiObjectNames(event){
-        console.log('starting toggleShowApiObjectNames');
-        this.isShowApiObjectNames = !this.isShowApiObjectNames;
+    toggleShowObjectLabels(event){
+        console.log('starting toggleShowObjectLabels');
+        this.isShowObjectLabels = !this.isShowObjectLabels;
         var returnOpts = [];
         returnOpts = [ ...returnOpts, {label: '--None--', value: ''} ];
         for (var i = 0; i < this.allObjects.length; i++) {
-            if( this.isShowApiObjectNames){
-                returnOpts = [ ...returnOpts, {label: this.allObjects[i].ApiName, value: this.allObjects[i].ApiName} ];
-            } else {
+            if( this.isShowObjectLabels){
                 returnOpts = [ ...returnOpts, {label: this.allObjects[i].Label + ' (' + this.allObjects[i].ApiName + ')', value: this.allObjects[i].ApiName} ];
+            } else {
+                returnOpts = [ ...returnOpts, {label: this.allObjects[i].ApiName, value: this.allObjects[i].ApiName} ];
             }
         }
         // sort returnOpts by label
@@ -949,6 +957,21 @@ export default class AndeeWorkbench extends LightningElement {
 
     get insertButtonLabel() {
         return this.objectValue ? 'Insert ' + this.objectValue : 'Insert';
+    }
+
+    get styledRowData() {
+        return this.rowData.map(record => ({
+            ...record,
+            nameStyle: `color: ${record.Nillable ? 'black' : 'red'}; 
+                        font-weight: ${record.Updatable ? 'bold' : 'normal'};`
+        }));
+    }
+
+    get styledFieldArrayCaseSensitive() {
+        return this.fieldArrayCaseSensitive.map(record => ({
+            ...record,
+            nameStyle: `color: ${record.Nillable || record.HasDefaultOnCreate? 'black' : 'red'};`
+        }));
     }
 
 }
