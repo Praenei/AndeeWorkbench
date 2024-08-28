@@ -77,6 +77,19 @@ public with sharing class AndeeWorkbenchController {
                 fw.Groupable = fieldResult.isGroupable();
                 fw.Createable = fieldResult.isCreateable();
                 fw.Updatable = fieldResult.isUpdateable();
+                fw.Nillable = fieldResult.isNillable();
+                fw.HasDefaultOnCreate = fieldResult.isDefaultedOnCreate();
+                if (fieldResult.isDefaultedOnCreate()){
+                    if(fieldResult.getDefaultValue()!=null){
+                        fw.DefaultValue = String.valueOf(fieldResult.getDefaultValue());
+                    } else if(fieldResult.getDefaultValueFormula()!=null){
+                        fw.DefaultValue = String.valueOf(fieldResult.getDefaultValueFormula());
+                    } else {
+                        fw.DefaultValue = ''; // Should never get here!!!
+                    }
+                } else {
+                    fw.DefaultValue = '';
+                }
                 fw.Linkable = (fw.Type=='Id' || fw.Type=='REFERENCE')?true:false;
                 fw.Value = '';
 
@@ -502,6 +515,8 @@ public with sharing class AndeeWorkbenchController {
                     obj.put(field.Name, DateTime.valueOf(newDateTime));
                 } else if(field.Type == 'DECIMAL'){
                     obj.put(field.Name, Decimal.valueOf(field.Value));
+                } else if(field.Type == 'DOUBLE'){
+                    obj.put(field.Name, Double.valueOf(field.Value));
                 } else if(field.Type == 'INTEGER'){
                     obj.put(field.Name, Integer.valueOf(field.Value));
                 } else if(field.Type == 'PERCENT'){
@@ -536,6 +551,7 @@ public with sharing class AndeeWorkbenchController {
 
         for(FieldWrapper field : objFields){
             if(field.Value != ''){
+                system.debug(field.Name + ' : ' + field.Type + ' : ' + field.Value);
                 if(field.Type == 'BOOLEAN'){
                     obj.put(field.Name, field.Value == 'true');
                 } else if(field.Type == 'DATE'){
@@ -545,6 +561,8 @@ public with sharing class AndeeWorkbenchController {
                     obj.put(field.Name, DateTime.valueOf(newDateTime));
                 } else if(field.Type == 'DECIMAL'){
                     obj.put(field.Name, Decimal.valueOf(field.Value));
+                } else if(field.Type == 'DOUBLE'){
+                    obj.put(field.Name, Double.valueOf(field.Value));
                 } else if(field.Type == 'INTEGER'){
                     obj.put(field.Name, Integer.valueOf(field.Value));
                 } else if(field.Type == 'PERCENT'){
@@ -692,7 +710,16 @@ public with sharing class AndeeWorkbenchController {
         public Boolean Updatable;
         
         @AuraEnabled
-        public Boolean Linkable;
+        public Boolean Linkable;        
+        
+        @AuraEnabled
+        public Boolean Nillable;         
+        
+        @AuraEnabled
+        public Boolean HasDefaultOnCreate;       
+        
+        @AuraEnabled
+        public String DefaultValue;
         
         @AuraEnabled
         public String Value;
