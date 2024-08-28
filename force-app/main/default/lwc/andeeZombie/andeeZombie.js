@@ -40,7 +40,6 @@ export default class AndeeZombie extends LightningModal {
     height = 20;
     playArea = [];
 	startingNumberOfZombies=3
-	startingNumberOfGhosts=0
 	noOfWalls = 65;
 	noOfDollars = 8;
 	noOfQuestions = 5;
@@ -63,9 +62,9 @@ export default class AndeeZombie extends LightningModal {
     playerX = 0;
     playerY = 0;
     isBombDropped = false;
+    isTeleporting = false;
 
     currentNumberOfZombies = 0;
-    currentNumberOfGhosts = 0;
 
 
 
@@ -75,7 +74,6 @@ export default class AndeeZombie extends LightningModal {
         this.isGameOver = false;
         
         this.currentNumberOfZombies = this.startingNumberOfZombies;
-        this.currentNumberOfGhosts = this.startingNumberOfGhosts;
 
         this.score = 0;
 
@@ -446,6 +444,7 @@ export default class AndeeZombie extends LightningModal {
                     break;
                 case 2:
                     this.message = 'Teleport time!';
+                    this.isTeleporting = true;
                     let newPlayerX, newPlayerY;
                     do {
                     newPlayerX = Math.floor(Math.random() * (this.width - 2)) + 1;
@@ -472,8 +471,8 @@ export default class AndeeZombie extends LightningModal {
         console.log(this.playerY +'='+ this.exitY +', '+ this.playerX +'='+ this.exitX);
         if (this.playerY === this.exitY && this.playerX === this.exitX) {
             this.score += 100;
-            this.updateLevelDisplay();
             this.currentNumberOfZombies++;
+            this.updateLevelDisplay();
             this.initializePlayArea(); // Regenerate play area with one additional zombie
         } else {
         
@@ -484,8 +483,13 @@ export default class AndeeZombie extends LightningModal {
             }
             
             // Move zombies
-            this.moveZombies();
-            this.moveGhosts();
+            // Don't move if just teleported
+            if(!this.isTeleporting){
+                this.moveZombies();
+                this.moveGhosts();
+            } else {
+                this.isTeleporting = false;
+            }
     
             
             if(this.isCaught(this.playerY, this.playerX)){
