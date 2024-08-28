@@ -40,6 +40,7 @@ export default class AndeeZombie extends LightningModal {
     height = 20;
     playArea = [];
 	startingNumberOfZombies=3
+	startingNumberOfGhosts=0
 	noOfWalls = 65;
 	noOfDollars = 8;
 	noOfQuestions = 5;
@@ -63,15 +64,20 @@ export default class AndeeZombie extends LightningModal {
     playerY = 0;
     isBombDropped = false;
 
+    currentNumberOfZombies = 0;
+    currentNumberOfGhosts = 0;
+
 
 
     gameStart() {
         console.log('gameStart');
         this.isGameStarted = true;
         this.isGameOver = false;
+        
+        this.currentNumberOfZombies = this.startingNumberOfZombies;
+        this.currentNumberOfGhosts = this.startingNumberOfGhosts;
 
         this.score = 0;
-	    this.level = 1;
 
         this.initializePlayArea();
         this.renderPlayArea();
@@ -191,11 +197,11 @@ export default class AndeeZombie extends LightningModal {
         }	
   
         // clear ghosts
-        this.ghosts.length = 0;
+        this.ghosts = [];
   
         // Add random zombies
-        this.zombies.length = 0; // Clear existing zombies
-        for (let i = 0; i < this.startingNumberOfZombies + Math.floor(this.score / 1000); i++) {
+        this.zombies = []; // Clear existing zombies
+        for (let i = 0; i < this.currentNumberOfZombies + Math.floor(this.score / 1000); i++) {
             let zombieX, zombieY;
             do {
                 zombieX = Math.floor(Math.random() * (this.width - 2)) + 1;
@@ -467,7 +473,7 @@ export default class AndeeZombie extends LightningModal {
         if (this.playerY === this.exitY && this.playerX === this.exitX) {
             this.score += 100;
             this.updateLevelDisplay();
-            this.startingNumberOfZombies++;
+            this.currentNumberOfZombies++;
             this.initializePlayArea(); // Regenerate play area with one additional zombie
         } else {
         
