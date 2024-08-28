@@ -53,10 +53,10 @@
                             <tr>
                                 <td valign="top" width="1" style="margin-top:2em;">
 
-                                    <lightning-input type="toggle" label="Show API object names" name="showApiObjectNames" message-toggle-active='' message-toggle-inactive='' style="margin-top:5px; margin-bottom:5px;" checked={isShowApiObjectNames} onchange={toggleShowApiObjectNames}></lightning-input>
+                                    <lightning-input type="toggle" label="Show object labels" name="showObjectLabels" message-toggle-active='' message-toggle-inactive='' style="margin-top:5px; margin-bottom:5px;" checked={isShowObjectLabels} onchange={toggleShowObjectLabels}></lightning-input>
 
                                     Object:<br/>
-                                    <select data-id="objectSelect" id="objectSelect" style="width: 16em" onchange={objectChanged}>
+                                    <select data-id="objectSelect" id="objectSelect" style="width: 30em" onchange={objectChanged}>
                                         <template for:each={objectOptions} for:item="oo" for:index="index">
                                             <option key={oo.index} value={oo.value} selected={oo.selected}>{oo.label}</option>
                                         </template>
@@ -102,15 +102,15 @@
                             <tr>
                                 <td valign="top" width="1" style="margin-top:2em;">
                                     Fields:<br/>
-                                    <select data-id="fieldSelect" id="fieldSelect" style="width: 16em;" multiple size="8" onchange={fieldChanged}>
+                                    <select data-id="fieldSelect" id="fieldSelect" style="width: 30em;" multiple size="15" onchange={fieldChanged}>
                                         <option value='count()'>count()</option>
                                         <template for:each={fieldOptions} for:item="fo" for:index="index">
                                             <option key={fo.index} value={fo.value} selected={fo.selected}>{fo.label}</option>
                                         </template>
                                     </select>
                                 </td>
-                                <td>
-                                    <table id="QB_right_sub_table" border="0" align="right" style="width:100%">
+                                <td style="vertical-align: top; padding-left: 2em;">
+                                    <table id="QB_right_sub_table" border="0" align="right" style="width:100%;">
                                         <tbody data-id="sort_and_filter">
                                             <tr id="sort_selection_headers">
                                                 <td colspan="2">
@@ -302,7 +302,9 @@
                     </table>
                 </div>
 
-                <!--<div style="clear: both;">-->
+
+
+                <!--Query Results-->
                 <div class="scrollableContainer">
                     <br>
                     <template if:true={queryResults}>
@@ -353,12 +355,12 @@
             </template>
 
             
-
+            <!-- Display single record for view or update -->
             <template if:true={isDisplaySingleId}>
                 Single Id Display : {selectedSingleRecordId} for Object : {selectedSingleRecordObject}
 
                 <template if:false={isUpdateView}>
-                    <lightning-input type="toggle" label="Show API field names" name="showApiFieldNames" message-toggle-active='' message-toggle-inactive='' style="margin-top:5px; margin-bottom:5px;" checked={isShowApiFieldNames} onchange={toggleShowApiFieldNames}></lightning-input>
+                    <lightning-input type="toggle" label="Show field labels" name="showFieldLabels" message-toggle-active='' message-toggle-inactive='' style="margin-top:5px; margin-bottom:5px;" checked={isShowFieldLabels} onchange={toggleShowFieldLabels}></lightning-input>
                 </template>
                 <p>
                     <input type="submit" name="back" value="Back" onclick={goBack}>
@@ -375,27 +377,20 @@
 
                 <table id="single_row_results" class="dataTable">
                     <tbody>
-                        <template for:each={rowData} for:item="record">
+                        <template for:each={styledRowData} for:item="record">
                             <template if:false={isUpdateView}>
                                 <tr key={record.Name} class="highlight-row">
-                                    <td>
-                                        <template if:true={record.Updatable}>
-                                            <template if:true={isShowApiFieldNames}>
-                                                <b>{record.Name}</b>
-                                            </template>
-                                            <template if:false={isShowApiFieldNames}>
-                                                <b>{record.Label}</b>
-                                            </template>
-                                        </template>
-                                        <template if:false={record.Updatable}>
-                                            <template if:true={isShowApiFieldNames}>
-                                                {record.Name}
-                                            </template>
-                                            <template if:false={isShowApiFieldNames}>
-                                                {record.Label}
-                                            </template>
-                                        </template>
-                                    </td>
+                                    <template if:false={isShowFieldLabels}>
+                                        <td style={record.nameStyle} title={record.Label}>
+                                            {record.Name}
+                                        </td>
+                                    </template>
+                                    <template if:true={isShowFieldLabels}>
+                                        <td style={record.nameStyle} title={record.Name}>
+                                            {record.Label}
+                                        </td>
+                                    </template>
+
                                     
                                     <td>
                                         <template if:true={record.Linkable}>
@@ -411,7 +406,7 @@
                             <template if:true={isUpdateView}>
                                 <template if:true={record.Updatable}>
                                     <tr key={record.Name} class="highlight-row">
-                                        <td>
+                                        <td style={record.nameStyle} title={record.Label}>
                                             {record.Name}
                                         </td>
                                         <td style="border-color: white;">
@@ -454,25 +449,25 @@
 
                 <table id="insert_row" class="dataTable">
                     <tbody>
-                        <template for:each={fieldArrayCaseSensitive} for:item="record">
+                        <template for:each={styledFieldArrayCaseSensitive} for:item="record">
                             <template if:true={record.Updatable}>
                                 <tr key={record.Name} class="highlight-row">
-                                    <td>
+                                    <td style={record.nameStyle} title={record.Label}>
                                         {record.Name}
                                     </td>
                                     <td style="border-color: white;">
-                                        <input type="text" data-id={record.Name} size="30" name="updateField" data-fieldname={record.Name} value={record.Value}/>
+                                        <input type="text" data-id={record.Name} size="30" name="insertField" data-fieldname={record.Name} value={record.DefaultValue}/>
                                     </td>
                                 </tr>
                             </template>
                             <template if:false={record.Updatable}>
                                 <template if:true={record.Createable}>
                                     <tr key={record.Name} class="highlight-row">
-                                        <td>
+                                        <td style={record.nameStyle} title={record.Label}>
                                             {record.Name}
                                         </td>
                                         <td style="border-color: white;">
-                                            <input type="text" data-id={record.Name} size="30" name="updateField" data-fieldname={record.Name} value={record.Value}/>
+                                            <input type="text" data-id={record.Name} size="30" name="updateField" data-fieldname={record.Name} value={record.DefaultValue}/>
                                         </td>
                                     </tr>
                                     </template>
