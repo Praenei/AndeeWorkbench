@@ -62,6 +62,9 @@ export default class AndeeZombie extends LightningModal {
     playerX = 0;
     playerY = 0;
     isBombDropped = false;
+    isTeleporting = false;
+
+    currentNumberOfZombies = 0;
 
 
 
@@ -69,9 +72,10 @@ export default class AndeeZombie extends LightningModal {
         console.log('gameStart');
         this.isGameStarted = true;
         this.isGameOver = false;
+        
+        this.currentNumberOfZombies = this.startingNumberOfZombies;
 
         this.score = 0;
-	    this.level = 1;
 
         this.initializePlayArea();
         this.renderPlayArea();
@@ -191,11 +195,11 @@ export default class AndeeZombie extends LightningModal {
         }	
   
         // clear ghosts
-        this.ghosts.length = 0;
+        this.ghosts = [];
   
         // Add random zombies
-        this.zombies.length = 0; // Clear existing zombies
-        for (let i = 0; i < this.startingNumberOfZombies + Math.floor(this.score / 1000); i++) {
+        this.zombies = []; // Clear existing zombies
+        for (let i = 0; i < this.currentNumberOfZombies + Math.floor(this.score / 1000); i++) {
             let zombieX, zombieY;
             do {
                 zombieX = Math.floor(Math.random() * (this.width - 2)) + 1;
@@ -440,6 +444,7 @@ export default class AndeeZombie extends LightningModal {
                     break;
                 case 2:
                     this.message = 'Teleport time!';
+                    this.isTeleporting = true;
                     let newPlayerX, newPlayerY;
                     do {
                     newPlayerX = Math.floor(Math.random() * (this.width - 2)) + 1;
@@ -466,8 +471,8 @@ export default class AndeeZombie extends LightningModal {
         console.log(this.playerY +'='+ this.exitY +', '+ this.playerX +'='+ this.exitX);
         if (this.playerY === this.exitY && this.playerX === this.exitX) {
             this.score += 100;
+            this.currentNumberOfZombies++;
             this.updateLevelDisplay();
-            this.startingNumberOfZombies++;
             this.initializePlayArea(); // Regenerate play area with one additional zombie
         } else {
         
@@ -478,8 +483,13 @@ export default class AndeeZombie extends LightningModal {
             }
             
             // Move zombies
-            this.moveZombies();
-            this.moveGhosts();
+            // Don't move if just teleported
+            if(!this.isTeleporting){
+                this.moveZombies();
+                this.moveGhosts();
+            } else {
+                this.isTeleporting = false;
+            }
     
             
             if(this.isCaught(this.playerY, this.playerX)){
