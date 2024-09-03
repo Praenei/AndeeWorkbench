@@ -19,21 +19,13 @@
                         <div class="slds-media slds-no-space slds-grow">
                             <h2 class="slds-card__header-title">
                                 <span class="slds-truncate slds-m-right--xx-small" title="Workbench" onclick={zombieEasterEgg}>
-                                    Workbench 1.0.9
+                                    Workbench 1.1.0
                                 </span>
                             </h2>
                         </div>
                     </div>
                 </div>
             </div>
-
-            <template if:true={error}>
-                <div data-id="errorDiv">
-                    <div data-id="errorDivInner" class="slds-notify slds-notify--alert slds-theme--error slds-theme--alert-texture" role="alert" >
-                    {error}
-                    </div>
-                </div>
-            </template>
 
             <template if:false={hideInfoDiv}>
                 <div data-id="infoDiv" style="clear: both;">
@@ -270,32 +262,70 @@
                                         {soqlQuery}
                                     </textarea>
                                 </td>
-                            </tr>
+                                
+                                <td style="vertical-align: middle; padding-left: 10px;">
+                                    <div style="display: flex; flex-direction: column; justify-content: center; height: 100%;">
+                                        {querySaveDisplayPosition}/{querySaveTotal}<br/>
+                                        <lightning-icon icon-name='utility:arrowup' alternative-text='forward' size='x-small' title='forward' variant={forwardArrowVariant} onclick={historyUp} style="margin-bottom: 5px;"></lightning-icon>
+                                        <lightning-icon icon-name='utility:arrowdown' alternative-text='back' size='x-small' title='back' variant={backArrowVariant} onclick={historyDown}></lightning-icon>
+                                    </div>
+                                </td>
+                            </tr>                            
 
+                            <template if:true={error}>
+                                <tr>
+                                    <td colspan="3">
+                                    <div data-id="errorDiv">
+                                        <div data-id="errorDivInner" class="slds-notify slds-notify--alert slds-theme--error slds-theme--alert-texture" role="alert" >
+                                        {error}
+                                        </div>
+                                    </div>
+                                    </td>
+                                </tr>
+                            </template>
                             <tr>
-                                <td colspan="1">
-                                    <table>
-                                        <tr>
-                                            <td>
-                                                <input type="submit" name="querySubmit" value="Query" onclick={submitQuery}>
-                                            </td>
-                                            <td>
-                                                <input type="submit" name="querySubmitTsv" value="TSV" onclick={submitTsvQuery}>
-                                            </td>
-                                            <td>
-                                                <input type="submit" name="querySubmitBatch" value="Batch TSV" onclick={submitQueryBatch}>
-                                            </td>
-                                            <td>
-                                                <input type="submit" name="resync" value="Resync SOQL" onclick={resyncSoql} >
-                                            </td>
+                                <td colspan="3">
+                                    <lightning-button
+                                        type="submit"
+                                        label="Query"
+                                        class="slds-m-top_small"
+                                        onclick={submitQuery}
+                                        style="margin-right: 10px;"
+                                    ></lightning-button>
+                                    
+                                    <lightning-button
+                                        type="submit"
+                                        label="TSV"
+                                        class="slds-m-top_small"
+                                        onclick={submitTsvQuery}
+                                        style="margin-right: 10px;"
+                                    ></lightning-button>
+                                    
+                                    <lightning-button
+                                        type="submit"
+                                        label="Batch TSV"
+                                        class="slds-m-top_small"
+                                        onclick={submitQueryBatch}
+                                        style="margin-right: 10px;"
+                                    ></lightning-button>
+                                    
+                                    <lightning-button
+                                        type="submit"
+                                        label="Resync SOQL"
+                                        class="slds-m-top_small"
+                                        onclick={resyncSoql}
+                                        style="margin-right: 10px;"
+                                    ></lightning-button>
 
-                                            <template if:true={objectValue}>
-                                                <td>
-                                                    <input type="submit" name="querySubmit" value={insertButtonLabel} onclick={displayNewRowForInsert}>
-                                                </td>
-                                            </template>
-                                        </tr>
-                                    </table>                            
+                                    <template if:true={objectValue}>
+                                        <lightning-button
+                                            type="submit"
+                                            label={insertButtonLabel}
+                                            class="slds-m-top_small"
+                                            onclick={displayNewRowForInsert}
+                                            style="margin-right: 10px;"
+                                        ></lightning-button>
+                                    </template>
                                 </td>
                             </tr>
                         </tbody>
@@ -357,25 +387,62 @@
             
             <!-- Display single record for view or update -->
             <template if:true={isDisplaySingleId}>
-                Single Id Display : {selectedSingleRecordId} for Object : {selectedSingleRecordObject}
-
+                <div class="slds-text-heading_small" style="padding: 10px;">
+                    Single Id Display : {selectedSingleRecordId} for Object : {selectedSingleRecordObject}
+                </div>
                 <template if:false={isUpdateView}>
-                    <lightning-input type="toggle" label="Show field labels" name="showFieldLabels" message-toggle-active='' message-toggle-inactive='' style="margin-top:5px; margin-bottom:5px;" checked={isShowFieldLabels} onchange={toggleShowFieldLabels}></lightning-input>
+
+                    <template if:true={error}>
+
+                        <div data-id="errorDiv">
+                            <div data-id="errorDivUpdate" class="slds-notify slds-notify--alert slds-theme--error slds-theme--alert-texture" role="alert" >
+                            {error}
+                            </div>
+                        </div>
+
+                    </template>
+                    <div class="bottom-right-container">
+                        <lightning-input type="toggle" label="Show field labels" name="showFieldLabels" class="bottom-right-container" message-toggle-active='' message-toggle-inactive='' style="margin-top:5px; margin-bottom:5px;" checked={isShowFieldLabels} onchange={toggleShowFieldLabels}></lightning-input>
+                    </div>
                 </template>
                 <p>
-                    <input type="submit" name="back" value="Back" onclick={goBack}>
-                    <input type="submit" name="update" value="Update" onclick={updateView}>
+                    <lightning-button
+                        type="submit"
+                        label="Back"
+                        class="slds-m-top_small"
+                        onclick={goBack}
+                        style="margin-right: 10px;"
+                    ></lightning-button>
+                    <lightning-button
+                        type="submit"
+                        label="Update"
+                        class="slds-m-top_small"
+                        onclick={updateView}
+                        style="margin-right: 10px;"
+                    ></lightning-button>
                     <template if:false={isUpdateView}>
                         <template if:false={isDeleted}>
-                            <input type="submit" name="delete" value="Delete" onclick={deleteRow}>
+                            <lightning-button
+                                type="submit"
+                                label="Delete"
+                                class="slds-m-top_small"
+                                onclick={deleteRow}
+                                style="margin-right: 10px;"
+                            ></lightning-button>
                         </template>               
                         <template if:true={isDeleted}>
-                            <input type="submit" name="undelete" value="Undelete" onclick={undeleteRow}>
+                            <lightning-button
+                                type="submit"
+                                label="Undelete"
+                                class="slds-m-top_small"
+                                onclick={undeleteRow}
+                                style="margin-right: 10px;"
+                            ></lightning-button>
                         </template>
                     </template>     
                 </p>
 
-                <table id="single_row_results" class="dataTable">
+                <table id="single_row_results" class="dataTable" style="width:80%">
                     <tbody>
                         <template for:each={styledRowData} for:item="record">
                             <template if:false={isUpdateView}>
@@ -421,15 +488,40 @@
                 </table>
 
 
-                <p>
-                    <input type="submit" name="back" value="Back" onclick={goBack}>
-                    <input type="submit" name="update" value="Update" onclick={updateView}>
+                <p>                    
+                    <lightning-button
+                        type="submit"
+                        label="Back"
+                        class="slds-m-top_small"
+                        onclick={goBack}
+                        style="margin-right: 10px;"
+                    ></lightning-button>
+                    
+                    <lightning-button
+                        type="submit"
+                        label="Update"
+                        class="slds-m-top_small"
+                        onclick={updateView}
+                        style="margin-right: 10px;"
+                    ></lightning-button>
                     <template if:false={isUpdateView}>
                         <template if:false={isDeleted}>
-                            <input type="submit" name="delete" value="Delete" onclick={deleteRow}>
+                            <lightning-button
+                                type="submit"
+                                label="Delete"
+                                class="slds-m-top_small"
+                                onclick={deleteRow}
+                                style="margin-right: 10px;"
+                            ></lightning-button>
                         </template>               
                         <template if:true={isDeleted}>
-                            <input type="submit" name="undelete" value="Undelete" onclick={undeleteRow}>
+                            <lightning-button
+                                type="submit"
+                                label="Undelete"
+                                class="slds-m-top_small"
+                                onclick={undeleteRow}
+                                style="margin-right: 10px;"
+                            ></lightning-button>
                         </template>
                     </template>
                 </p>
@@ -440,11 +532,34 @@
             
 
             <template if:true={isInsertView}>
-                Object : {objectValue}
+                <div class="slds-text-heading_small" style="padding: 10px;">
+                    Object : {objectValue}
+                </div>  
+
+                <template if:true={error}>
+                    <div data-id="errorDiv">
+                        <div data-id="errorDivInsert" class="slds-notify slds-notify--alert slds-theme--error slds-theme--alert-texture" role="alert" >
+                        {error}
+                        </div>
+                    </div>
+                </template>
 
                 <p>
-                    <input type="submit" name="back" value="Back" onclick={goBack}>
-                    <input type="submit" name="insert" value="Insert" onclick={insertRow}>
+                    <lightning-button
+                        type="submit"
+                        label="Back"
+                        class="slds-m-top_small"
+                        onclick={goBack}
+                        style="margin-right: 10px;"
+                    ></lightning-button>
+                    
+                    <lightning-button
+                        type="submit"
+                        label="Insert"
+                        class="slds-m-top_small"
+                        onclick={insertRow}
+                        style="margin-right: 10px;"
+                    ></lightning-button>
                 </p>
 
                 <table id="insert_row" class="dataTable">
@@ -479,17 +594,26 @@
 
 
                 <p>
-                    <input type="submit" name="back" value="Back" onclick={goBack}>
-                    <input type="submit" name="insert" value="Insert" onclick={insertRow}>
+                    <lightning-button
+                        type="submit"
+                        label="Back"
+                        class="slds-m-top_small"
+                        onclick={goBack}
+                        style="margin-right: 10px;"
+                    ></lightning-button>
+                    
+                    <lightning-button
+                        type="submit"
+                        label="Insert"
+                        class="slds-m-top_small"
+                        onclick={insertRow}
+                        style="margin-right: 10px;"
+                    ></lightning-button>
                 </p>
             </template>
 
-
         </div>
-
-
         
-
     </div>
     
 </template>
