@@ -82,10 +82,8 @@ public with sharing class AndeeWorkbenchController {
                 if (fieldResult.isDefaultedOnCreate()){
                     if(fieldResult.getDefaultValue()!=null){
                         fw.DefaultValue = String.valueOf(fieldResult.getDefaultValue());
-                    } else if(fieldResult.getDefaultValueFormula()!=null){
-                        fw.DefaultValue = String.valueOf(fieldResult.getDefaultValueFormula());
                     } else {
-                        fw.DefaultValue = ''; // Should never get here!!!
+                        fw.DefaultValue = '';
                     }
                 } else {
                     fw.DefaultValue = '';
