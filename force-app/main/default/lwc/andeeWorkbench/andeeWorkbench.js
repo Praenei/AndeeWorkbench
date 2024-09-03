@@ -17,6 +17,7 @@ import insertSingleEntryData from '@salesforce/apex/AndeeWorkbenchController.Ins
 //import convertTimeZone from '@salesforce/apex/AndeeWorkbenchController.ConvertTimeZone';
 
 import andeeZombie from 'c/andeeZombie';
+import areYouSure from 'c/areYouSure';
 
 export default class AndeeWorkbench extends LightningElement {    
     // Track variables for component state
@@ -67,7 +68,8 @@ export default class AndeeWorkbench extends LightningElement {
 
     chainOfSingleRowIds = []; // Used to control where the user goes after hitting the back button e.g. previous single row data or query
 
-    
+    querySave = [];
+    querySavePosition = 0;
 
     // Initialization function when component is loaded
     connectedCallback() {
@@ -148,15 +150,6 @@ export default class AndeeWorkbench extends LightningElement {
         })
     }
 
-    // Handler for object selection change
-    objectChangedOLD(event){
-        console.log('starting objectChanged');
-        this.isLoading = true;
-        var obj = this.template.querySelector('[data-id="objectSelect"]')
-        this.objectValue = obj.value;
-        this.getFields();
-    }
-
     objectChanged(event){
         console.log('starting objectChanged');
         this.isLoading = true;
@@ -194,6 +187,14 @@ export default class AndeeWorkbench extends LightningElement {
                     this.queryResults = [];
                     this.queryHeadings = ['Count()'];
                     this.queryResults = data;
+
+                    // remove the query from the array
+                    if(this.querySave.includes(this.soqlQuery)){
+                        this.querySave = this.querySave.filter(e => e !== this.soqlQuery);
+                    }
+                    // Add the query to the end of the array
+                    this.querySave = [ ...this.querySave, this.soqlQuery ];
+                    this.querySavePosition = this.querySave.length;
               
                     this.isLoading = false;
                     this.error = undefined;
@@ -243,7 +244,18 @@ export default class AndeeWorkbench extends LightningElement {
                             }
                         }
                     }
-                }                
+                } 
+                
+
+                // remove the query from the array
+                if(this.querySave.includes(this.soqlQuery)){
+                    this.querySave = this.querySave.filter(e => e !== this.soqlQuery);
+                }
+                // Add the query to the end of the array
+                this.querySave = [ ...this.querySave, this.soqlQuery ];
+                this.querySavePosition = this.querySave.length;
+                
+
                 this.isLoading = false;
                 this.error = undefined;
             
@@ -253,6 +265,31 @@ export default class AndeeWorkbench extends LightningElement {
                 console.error('error (submitQuery) => ', error);
                 this.isLoading = false;
             })
+        }
+    }
+
+    historyUp(){
+        console.log('starting historyUp:' + this.querySave.length + ':' + this.querySavePosition);
+        if(this.querySave.length > 0 && this.querySavePosition < this.querySave.length -1){
+            this.querySavePosition++;
+            this.template.querySelector('[data-id="soql_query_textarea"]').value = this.querySave[this.querySavePosition];
+        }
+    }
+
+    historyDown(){
+        console.log('starting historyDown:' + this.querySave.length + ':' + this.querySavePosition);
+        if(this.querySave.length > 0 && this.querySavePosition > 0){
+            this.querySavePosition--;
+            
+            if(this.querySave[this.querySavePosition] == this.template.querySelector('[data-id="soql_query_textarea"]').value){
+            
+                if(this.querySavePosition > 0){
+                    this.querySavePosition--;
+                }
+            }        
+            
+
+            this.template.querySelector('[data-id="soql_query_textarea"]').value = this.querySave[this.querySavePosition];
         }
     }
 
@@ -579,6 +616,9 @@ export default class AndeeWorkbench extends LightningElement {
     goBack(event){
         console.log('starting goBack');
 
+        
+        this.error = undefined;
+
 
         // remove the last element from the chainOfSingleRowIds array
         this.chainOfSingleRowIds.pop();
@@ -664,6 +704,7 @@ export default class AndeeWorkbench extends LightningElement {
 
         this.isUpdateView = false;
         this.isDeleted = false;
+        this.error = undefined;
         getSingleEntryData({selectedId : recordId})
         .then(data => {
             this.rowData = [];
@@ -736,14 +777,36 @@ export default class AndeeWorkbench extends LightningElement {
             })
             .catch(error => {
                 console.error('error (updateView) => ', error); // error handling
-                if(error.body && error.body.fieldErrors && error.body.fieldErrors.Name){
-                    this.error = error.body.fieldErrors.Name[0].message;
-                } else  if(error.body && error.body.pageErrors){
-                    this.error = error.body.pageErrors[0].message;
+                if(error.body && error.body.fieldErrors){
+                    const fieldErrors = error.body.fieldErrors;
+                    this.error = '';
+                    for (let field in fieldErrors) {
+                        if (fieldErrors.hasOwnProperty(field)) {
+                            const errors = fieldErrors[field];
+                            if (Array.isArray(errors) && errors.length > 0) {
+                                errors.forEach(err => {
+                                    if (err.message) {
+                                        this.error = this.error + err.message + '\n';
+                                    }
+                                });
+                            }
+                        }
+                    }                
+                
+                } 
+                
+                if(error.body && error.body.pageErrors){
+                    if (Array.isArray(error.body.pageErrors) && error.body.pageErrors.length > 0) {
+                        error.body.pageErrors.forEach(err => {
+                            if (err.message) {
+                                this.error = this.error + err.message + '\n';
+                            }
+                        });
+                    }
                 } else if(error.body && error.body.message){
-                    this.error = error.body.message;
+                    this.error = this.error + error.body.message;
                 } else {
-                    this.error = 'Error occurred.  See console log for more details';
+                    this.error = this.error + 'Error occurred.  See console log for more details';
                 }
                 this.isLoading = false;
             })
@@ -759,6 +822,7 @@ export default class AndeeWorkbench extends LightningElement {
     displayNewRowForInsert(event){
         console.log('starting displayNewRowForInsert');
         this.isLoading = true;
+        this.error = undefined;
         this.isInsertView = true;
         this.isLoading = false;
 
@@ -797,15 +861,37 @@ export default class AndeeWorkbench extends LightningElement {
         })
         .catch(error => {
             console.error('error (insertSingleEntryData) => ', error); // error handling
-            if(error.body && error.body.fieldErrors && error.body.fieldErrors.Name){
-                this.error = error.body.fieldErrors.Name[0].message;
-            } else  if(error.body && error.body.pageErrors){
-                this.error = error.body.pageErrors[0].message;
+            if(error.body && error.body.fieldErrors){
+                const fieldErrors = error.body.fieldErrors;
+                this.error = '';
+                for (let field in fieldErrors) {
+                    if (fieldErrors.hasOwnProperty(field)) {
+                        const errors = fieldErrors[field];
+                        if (Array.isArray(errors) && errors.length > 0) {
+                            errors.forEach(err => {
+                                if (err.message) {
+                                    this.error = this.error + err.message + '\n';
+                                }
+                            });
+                        }
+                    }
+                }                
+            }             
+                
+            if(error.body && error.body.pageErrors){
+                if (Array.isArray(error.body.pageErrors) && error.body.pageErrors.length > 0) {
+                    error.body.pageErrors.forEach(err => {
+                        if (err.message) {
+                            this.error = this.error + err.message + '\n';
+                        }
+                    });
+                }
             } else if(error.body && error.body.message){
-                this.error = error.body.message;
+                this.error = this.error + error.body.message;
             } else {
-                this.error = 'Error occurred.  See console log for more details';
+                this.error = this.error + 'Error occurred.  See console log for more details';
             }
+
             this.isLoading = false;
         })
         
@@ -814,23 +900,38 @@ export default class AndeeWorkbench extends LightningElement {
 
     deleteRow(event){
         console.log('starting deleteRow');
-        this.isLoading = true;
+        
 
-        deleteEntry({selectedId : this.selectedSingleRecordId})
-        .then(data => {
-            this.error = undefined;
-            this.isDisplaySingleId = false;
-            this.isLoading = false;
-        })
-        .catch(error => {
-            if(error.body.fieldErrors.Name){
-                this.error = error.body.fieldErrors.Name[0].message;
-            } else {
-                this.error = 'Error occurred.  See console log for details';
+        areYouSure.open ({
+            label: 'Are You Sure',
+            description: 'confirm deletion',
+            size: 'small',
+            message: 'Are you sure you want to delete id: ' + this.selectedSingleRecordId  +'?'
+        }).then((result) => {
+
+            if(result){
+                this.isLoading = true;
+
+                deleteEntry({selectedId : this.selectedSingleRecordId})
+                .then(data => {
+                    this.error = undefined;
+                    this.isDisplaySingleId = false;
+                    this.isLoading = false
+                })
+                .catch(error => {
+                    if(error.body.fieldErrors.Name){
+                        this.error = error.body.fieldErrors.Name[0].message;
+                    } else {
+                        this.error = 'Error occurred.  See console log for details';
+                    }
+                    console.error('error (deleteRow) => ', error); // error handling
+                    this.isLoading = false
+
+                })
             }
-            console.error('error (deleteRow) => ', error); // error handling
-            this.isLoading = false;
-        })
+            
+            
+        });
     }    
     
 
@@ -973,5 +1074,26 @@ export default class AndeeWorkbench extends LightningElement {
             nameStyle: `color: ${record.Nillable || record.HasDefaultOnCreate? 'black' : 'red'};`
         }));
     }
+
+    get forwardArrowVariant() {
+        return this.querySavePosition < this.querySave.length - 1 ? 'success' : 'inverse';
+    }
+
+    get backArrowVariant() {
+        return this.querySavePosition > 0 ? 'success' : 'inverse';
+    }
+
+    get querySaveDisplayPosition() {
+        if(this.querySavePosition>=this.querySave.length){
+            return this.querySave.length
+        } else {
+            return this.querySavePosition + 1;
+        }
+    }
+
+    get querySaveTotal() {
+        return this.querySave.length;
+    }
+
 
 }
