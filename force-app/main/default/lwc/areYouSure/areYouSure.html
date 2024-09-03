@@ -1,0 +1,34 @@
+<template>
+    <lightning-modal-header label="Are You Sure?">
+        
+    </lightning-modal-header>
+
+    <lightning-modal-body>
+
+        <template if:true={message}>
+            <div>
+                <div class="slds-notify slds-notify--alert slds-theme--alert-texture" role="alert" style="margin-bottom : 10px;">
+                    {message}
+                </div>
+            </div>
+        </template>
+        
+
+        <lightning-button
+            type="submit"
+            label="Contine"
+            class="slds-m-top_small"
+            onclick={handleContinue}
+            style="margin-right: 10px;"
+        ></lightning-button>
+
+        <lightning-button
+            type="submit"
+            label="Cancel"
+            class="slds-m-top_small"
+            onclick={handleCancel}
+        ></lightning-button>
+                
+    </lightning-modal-body>
+    
+</template>
