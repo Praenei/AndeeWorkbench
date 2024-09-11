@@ -6,7 +6,7 @@ import getFieldsForObject from '@salesforce/apex/AndeeWorkbenchController.GetFie
 import submitQuery from '@salesforce/apex/AndeeWorkbenchController.SubmitQuery';
 import submitQueryTsv from '@salesforce/apex/AndeeWorkbenchController.SubmitQueryTsv';
 import submitQueryBatch from '@salesforce/apex/BatchAndeeWorkbench.SubmitQueryBatch';
-import submitQueryCount from '@salesforce/apex/AndeeWorkbenchController.SubmitQueryCount';
+//import submitQueryCount from '@salesforce/apex/AndeeWorkbenchController.SubmitQueryCount';
 import getBatchJobStatus from '@salesforce/apex/BatchAndeeWorkbench.GetBatchJobStatus';
 import GetSettings from '@salesforce/apex/AndeeWorkbenchController.GetSettings';
 import getSingleEntryData from '@salesforce/apex/AndeeWorkbenchController.GetSingleEntryData';
@@ -42,6 +42,7 @@ export default class AndeeWorkbench extends LightningElement {
     @track selectedSingleRecordId;
     @track selectedSingleRecordObject;
     @track rowData = [];
+    @track totalRowCountWithNoLimit;
     @track isDisplaySingleId = false;
     @track isUpdateView = false;
     @track isInsertView = false;
@@ -171,7 +172,9 @@ export default class AndeeWorkbench extends LightningElement {
 
         this.parsedSoql = this.parseSoql(this.soqlQuery);
 
-        if(this.parsedSoql.fields.length == 1 && this.parsedSoql.fields.toLowerCase == 'count()'){
+        console.log(this.parsedSoql.fields.length + ' : ' + this.parsedSoql.fields[0].toLowerCase());
+
+        if(this.parsedSoql.fields.length == 1 && this.parsedSoql.fields[0].toLowerCase() == 'count()'){
 
             console.log('Performing count query');
 
@@ -185,8 +188,9 @@ export default class AndeeWorkbench extends LightningElement {
                 .then(data => {
                     // Process count query results
                     this.queryResults = [];
+                    this.totalRowCountWithNoLimit = undefined;
                     this.queryHeadings = ['Count()'];
-                    this.queryResults = data;
+                    this.queryResults = data.Rows;
 
                     // remove the query from the array
                     if(this.querySave.includes(this.soqlQuery)){
@@ -222,7 +226,8 @@ export default class AndeeWorkbench extends LightningElement {
                 this.queryHeadings = [];
                 this.queryResults = [];
                 var results = [];
-                results = data;
+                this.totalRowCountWithNoLimit = data.TotalRowCountWithNoLimit;
+                results = data.Rows;
                 var headings = [];
 
                 if(results.length>0){
@@ -232,7 +237,7 @@ export default class AndeeWorkbench extends LightningElement {
                     this.queryHeadings = headings;
                 }
 
-                this.queryResults = data;
+                this.queryResults = data.Rows;
 
                 // Process field linkability
                 for(var i=0; i<this.queryResults.length; i++){
@@ -314,6 +319,7 @@ export default class AndeeWorkbench extends LightningElement {
         .then(data => {
             // Process TSV query results
             this.queryResults = [];
+            this.totalRowCountWithNoLimit = undefined;
             this.queryHeadings = ['Download CSV'];
             const downloadLink = {};
             downloadLink.Value = 'Download';
@@ -340,9 +346,10 @@ export default class AndeeWorkbench extends LightningElement {
 
     submitQueryBatch(){
         console.log('starting submitQueryBatch');
+        this.isLoading = true;
         this.queryHeadings = [];
         this.queryResults = [];
-        this.isLoading = true;
+        this.totalRowCountWithNoLimit = undefined;
 
         this.soqlQuery = this.template.querySelector('[data-id="soql_query_textarea"]').value;
 

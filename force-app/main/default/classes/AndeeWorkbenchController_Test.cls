@@ -93,7 +93,7 @@ private class AndeeWorkbenchController_Test {
     @isTest
     static void testSubmitQuery() {
         List<String> fields = new List<String>{'Id', 'Name', 'Industry', 'Parent.Name'};
-        List<AndeeWorkbenchController.ResultWrapper> results = AndeeWorkbenchController.SubmitQuery(
+        AndeeWorkbenchController.ResultWrapper result = AndeeWorkbenchController.SubmitQuery(
             'Account', 
             fields, 
             'Industry = \'Finance\'', 
@@ -102,9 +102,10 @@ private class AndeeWorkbenchController_Test {
             false
         );
         
-        System.assertEquals(1, results.size(), 'There should be one account with Finance industry');
-        System.assertEquals('Child Account', results[0].Fields[1].Value, 'The account name should be Child Account');
-        System.assertEquals('Parent Account', results[0].Fields[3].Value, 'The parent account name should be Parent Account');
+        System.assertEquals(1, result.TotalRowCountWithNoLimit, 'There should be one account with Finance industry');
+        System.assertEquals(1, result.Rows.size(), 'There should be one account with Finance industry');
+        System.assertEquals('Child Account', result.Rows[0].Fields[1].Value, 'The account name should be Child Account');
+        System.assertEquals('Parent Account', result.Rows[0].Fields[3].Value, 'The parent account name should be Parent Account');
     }
     
     /**
