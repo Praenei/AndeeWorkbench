@@ -99,7 +99,8 @@ private class AndeeWorkbenchController_Test {
             'Industry = \'Finance\'', 
             'Name ASC', 
             '10', 
-            false
+            false,
+            ''
         );
         
         System.assertEquals(1, result.TotalRowCountWithNoLimit, 'There should be one account with Finance industry');
