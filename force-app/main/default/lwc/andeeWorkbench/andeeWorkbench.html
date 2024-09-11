@@ -19,7 +19,7 @@
                         <div class="slds-media slds-no-space slds-grow">
                             <h2 class="slds-card__header-title">
                                 <span class="slds-truncate slds-m-right--xx-small" title="Workbench" onclick={zombieEasterEgg}>
-                                    Workbench 1.1.0
+                                    Workbench 1.1.1
                                 </span>
                             </h2>
                         </div>
@@ -284,7 +284,7 @@
                                 </tr>
                             </template>
                             <tr>
-                                <td colspan="3">
+                                <td colspan="3" style="padding-top: 5px; padding-bottom: 5px;" >
                                     <lightning-button
                                         type="submit"
                                         label="Query"
@@ -335,9 +335,14 @@
 
 
                 <!--Query Results-->
-                <div class="scrollableContainer">
-                    <br>
-                    <template if:true={queryResults}>
+            
+                <br>
+                <template if:true={queryResults}>
+
+                    <template if:true={totalRowCountWithNoLimit}>
+                        Total rows : <lightning-formatted-number value={totalRowCountWithNoLimit}> </lightning-formatted-number><br>
+                    </template>
+                    <div class="scrollableContainer">
                         <table id="query_results" class="scrollable">
                             <thead>
                                 <tr>
@@ -369,17 +374,18 @@
         
                             </tbody>
                         </table>
+                    </div>
+                </template>
+    
+                <template if:true={jobStatus}>
+                    <p>Status: {jobStatus.Status}</p>
+                    <p>Items Processed: {jobStatus.JobItemsProcessed} / {jobStatus.TotalJobItems}</p>
+                    
+                    <template if:true={isBatchJobCompleted}>
+                        <p><a href={contentVersionUrl} target="_blank">Download</a></p>
                     </template>
-        
-                    <template if:true={jobStatus}>
-                        <p>Status: {jobStatus.Status}</p>
-                        <p>Items Processed: {jobStatus.JobItemsProcessed} / {jobStatus.TotalJobItems}</p>
-                        
-                        <template if:true={isBatchJobCompleted}>
-                            <p><a href={contentVersionUrl} target="_blank">Download</a></p>
-                        </template>
-                    </template>
-                </div>
+                </template>
+            
 
 
             </template>
