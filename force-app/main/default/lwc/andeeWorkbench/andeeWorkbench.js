@@ -72,6 +72,9 @@ export default class AndeeWorkbench extends LightningElement {
     querySave = [];
     querySavePosition = 0;
 
+    pageOfData = 0;
+    
+
     // Initialization function when component is loaded
     connectedCallback() {
         console.log('starting connectedCallback');
@@ -166,6 +169,7 @@ export default class AndeeWorkbench extends LightningElement {
         console.log('starting submitQuery');
         this.isLoading = true;
         this.jobStatus = null;
+        this.pageOfData = 0;
 
         // Get the SOQL query from the textarea
         this.soqlQuery = this.template.querySelector('[data-id="soql_query_textarea"]').value;
@@ -184,7 +188,8 @@ export default class AndeeWorkbench extends LightningElement {
                 whereClause : this.parsedSoql.whereClauses, 
                 sortOrder : this.parsedSoql.orderByClauses, 
                 limitCount : this.parsedSoql.limitValue,
-                allRows : this.template.querySelector('[data-id="excludeDeleted"]').checked})
+                allRows : this.template.querySelector('[data-id="excludeDeleted"]').checked,
+                offset : ''})
                 .then(data => {
                     // Process count query results
                     this.queryResults = [];
@@ -199,6 +204,8 @@ export default class AndeeWorkbench extends LightningElement {
                     // Add the query to the end of the array
                     this.querySave = [ ...this.querySave, this.soqlQuery ];
                     this.querySavePosition = this.querySave.length;
+
+                    this.pageOfData++;
               
                     this.isLoading = false;
                     this.error = undefined;
@@ -219,7 +226,8 @@ export default class AndeeWorkbench extends LightningElement {
                 whereClause : this.parsedSoql.whereClauses, 
                 sortOrder : this.parsedSoql.orderByClauses, 
                 limitCount : this.parsedSoql.limitValue,
-                allRows : this.template.querySelector('[data-id="excludeDeleted"]').checked})
+                allRows : this.template.querySelector('[data-id="excludeDeleted"]').checked,
+                offset : ''})
             .then(data => {
                 console.log(data);
                 // Process query results
@@ -259,6 +267,8 @@ export default class AndeeWorkbench extends LightningElement {
                 // Add the query to the end of the array
                 this.querySave = [ ...this.querySave, this.soqlQuery ];
                 this.querySavePosition = this.querySave.length;
+
+                this.pageOfData++;
                 
 
                 this.isLoading = false;
@@ -425,6 +435,9 @@ export default class AndeeWorkbench extends LightningElement {
         const limitIndex = partsLower.indexOf('limit');
         if(limitIndex !== -1){
             result.limitValue = parseInt(partsLower[limitIndex + 1], 10);
+            this.limit = result.limitValue;
+        } else {
+            this.limit = '';
         }
 
         console.log('Parsed SOQL :' + JSON.stringify(result));
@@ -996,6 +1009,78 @@ export default class AndeeWorkbench extends LightningElement {
 
     }
 
+
+    loadPreviousPageOfData(event){
+        console.log('starting loadPreviousPageOfData');
+        this.pageOfData--;
+        this.loadPageOfData();
+    }
+
+
+    loadNextPageOfData(event){
+        console.log('starting loadNextPageOfData');
+        this.pageOfData++;
+        this.loadPageOfData();
+    }
+
+
+    loadPageOfData(){
+        console.log('starting loadPageOfData');
+        this.isLoading = true;
+        this.jobStatus = null;
+
+        const offset = (this.pageOfData-1)*this.limit;
+        // Submit a regular SOQL query
+        submitQuery({objectApiName : this.parsedSoql.objectName,
+            fields : this.parsedSoql.fields,
+            whereClause : this.parsedSoql.whereClauses, 
+            sortOrder : this.parsedSoql.orderByClauses, 
+            limitCount : this.parsedSoql.limitValue,
+            allRows : this.template.querySelector('[data-id="excludeDeleted"]').checked,
+            offset : offset})
+        .then(data => {
+            console.log(data);
+            // Process query results
+            this.queryHeadings = [];
+            this.queryResults = [];
+            var results = [];
+            this.totalRowCountWithNoLimit = data.TotalRowCountWithNoLimit;
+            results = data.Rows;
+            var headings = [];
+
+            if(results.length>0){
+                for (var i = 0; i < results[0].Fields.length; i++) {
+                    headings = [ ...headings, results[0].Fields[i].Name]  ;
+                }
+                this.queryHeadings = headings;
+            }
+
+            this.queryResults = data.Rows;
+
+            // Process field linkability
+            for(var i=0; i<this.queryResults.length; i++){
+                for(var j=0; j<this.queryResults[i].Fields.length; j++){
+                    if (this.fieldArrayLowercase[this.queryResults[i].Fields[j].Name.toLowerCase()]?.Linkable !== undefined) {
+                        this.queryResults[i].Fields[j].Linkable = this.fieldArrayLowercase[this.queryResults[i].Fields[j].Name.toLowerCase()].Linkable;
+                        if (this.queryResults[i].Fields[j].Linkable) {
+                            this.queryResults[i].Fields[j].HRef = this.orgDomainUrl + '/' + this.queryResults[i].Fields[j].Value;
+                        }
+                    }
+                }
+            }             
+
+            this.isLoading = false;
+            this.error = undefined;
+        
+        })
+        .catch(error => {
+            this.error = error.body.message;
+            console.error('error (loadPageOfData) => ', error);
+            this.isLoading = false;
+        })
+
+    }
+
     /*datetimeChange(){
 
         
@@ -1100,6 +1185,26 @@ export default class AndeeWorkbench extends LightningElement {
 
     get querySaveTotal() {
         return this.querySave.length;
+    }
+
+    get moreDataToShow() {
+        return ((this.pageOfData-1) * this.limit) + this.queryResults.length < Math.min(this.totalRowCountWithNoLimit, 2001); // 2000 is the maximum allowed offset
+    }
+
+    get prevDataToShow() {
+        return this.pageOfData > 1;
+    }
+
+    get displayOffsetDetails() {
+        return this.queryResults.length < this.totalRowCountWithNoLimit;
+    }
+
+    get displayStartingDataRowNumber() {
+        return ((this.pageOfData-1) * this.limit) + 1;
+    }
+
+    get displayLastDataRowNumber() {
+        return Math.min((this.pageOfData * this.limit), this.totalRowCountWithNoLimit);
     }
 
 

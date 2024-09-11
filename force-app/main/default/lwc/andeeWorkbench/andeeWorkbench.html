@@ -340,7 +340,11 @@
                 <template if:true={queryResults}>
 
                     <template if:true={totalRowCountWithNoLimit}>
-                        Total rows : <lightning-formatted-number value={totalRowCountWithNoLimit}> </lightning-formatted-number><br>
+                        Total rows : <lightning-formatted-number value={totalRowCountWithNoLimit}> </lightning-formatted-number>
+                        <template if:true={displayOffsetDetails}>
+                            &NonBreakingSpace;(showing : <lightning-formatted-number value={displayStartingDataRowNumber}> </lightning-formatted-number> - <lightning-formatted-number value={displayLastDataRowNumber}> </lightning-formatted-number>)
+                        </template>
+                        <br>
                     </template>
                     <div class="scrollableContainer">
                         <table id="query_results" class="scrollable">
@@ -375,6 +379,26 @@
                             </tbody>
                         </table>
                     </div>
+
+                    <template if:true={prevDataToShow}>
+                        <lightning-button
+                            type="submit"
+                            label="Previous"
+                            class="slds-m-top_small"
+                            onclick={loadPreviousPageOfData}
+                            style="padding-top: 5px; margin-right: 10px;"
+                        ></lightning-button>
+                    </template>
+
+                    <template if:true={moreDataToShow}>
+                        <lightning-button
+                            type="submit"
+                            label="More"
+                            class="slds-m-top_small"
+                            onclick={loadNextPageOfData}
+                            style="padding-top: 5px; margin-right: 10px;"
+                        ></lightning-button>
+                    </template>
                 </template>
     
                 <template if:true={jobStatus}>
