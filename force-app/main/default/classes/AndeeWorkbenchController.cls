@@ -131,28 +131,36 @@ public with sharing class AndeeWorkbenchController {
      * @return : list<ResultWrapper> : the returned data.  Includes the rowid & then a list of name/value pairs
     */ 
     @AuraEnabled
-    public static List<ResultWrapper> SubmitQuery(String objectApiName, list<string> fields, string whereClause, string sortOrder, string limitCount, boolean allRows) {
+    public static ResultWrapper SubmitQuery(String objectApiName, list<string> fields, string whereClause, string sortOrder, string limitCount, boolean allRows) {
 
-        List<ResultWrapper> results = new List<ResultWrapper>();
+        
+        ResultWrapper result = new ResultWrapper();
+        list<RowWrapper> rows = new list<RowWrapper>();
 
         boolean idAutoAdded = false;
+
+        // Always perform a count()
+        integer count = SubmitQueryCount(objectApiName, whereClause, allRows);
+        result.TotalRowCountWithNoLimit = count;
+
 
         // handle if count() is in the fields
         if(fields.size() == 1 && fields[0].toLowerCase() == 'count()'){
 
             FieldData fw = new FieldData();
             fw.Name = 'count()';
-            fw.Value = String.valueOf(SubmitQueryCount(objectApiName, whereClause, allRows));
+            fw.Value = String.valueOf(count);
             fw.Linkable = false;
 
 
-            ResultWrapper rw = new ResultWrapper();
+            RowWrapper rw = new RowWrapper();
             rw.RowId = '0';
             rw.Fields = new List<FieldData>();
             rw.Fields.add(fw);
 
-            results.add(rw);
-            return results;
+            rows.add(rw);
+            result.Rows = rows;
+            return result;
         }
 
         boolean idExists = false;
@@ -176,7 +184,7 @@ public with sharing class AndeeWorkbenchController {
 
         // Iterate through the results
         for (SObject obj : queryResults) {
-            ResultWrapper wrapper = new ResultWrapper();
+            RowWrapper wrapper = new RowWrapper();
             wrapper.RowId = (String)obj.get('Id');
             wrapper.Fields = new List<FieldData>();
 
@@ -214,10 +222,12 @@ public with sharing class AndeeWorkbenchController {
                 }
             }
 
-            results.add(wrapper);
+            rows.add(wrapper);
         }
 
-        return results;
+        result.Rows = rows;
+
+        return result;
     }
     
 
@@ -727,6 +737,11 @@ public with sharing class AndeeWorkbenchController {
     }
     
     public class ResultWrapper {
+        @AuraEnabled public Integer TotalRowCountWithNoLimit;
+        @AuraEnabled public List<RowWrapper> Rows;
+    }    
+    
+    public class RowWrapper {
         @AuraEnabled public String RowId;
         @AuraEnabled public List<FieldData> Fields;
     }
