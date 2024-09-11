@@ -128,10 +128,11 @@ public with sharing class AndeeWorkbenchController {
      * @param : string sortOrder : the SOQL Order By clause 
      * @param : string limitCount : the SOQL Limit  
      * @param : boolean allRows : if to include deleted/archived rows or not 
+     * @param : string offset : the offset to start from
      * @return : list<ResultWrapper> : the returned data.  Includes the rowid & then a list of name/value pairs
     */ 
     @AuraEnabled
-    public static ResultWrapper SubmitQuery(String objectApiName, list<string> fields, string whereClause, string sortOrder, string limitCount, boolean allRows) {
+    public static ResultWrapper SubmitQuery(String objectApiName, list<string> fields, string whereClause, string sortOrder, string limitCount, boolean allRows, string offset) {
 
         
         ResultWrapper result = new ResultWrapper();
@@ -177,7 +178,7 @@ public with sharing class AndeeWorkbenchController {
             idAutoAdded = true;
         }
 
-        string query = constructQuery(objectApiName, fields, whereClause, sortOrder, limitCount, allRows);
+        string query = constructQuery(objectApiName, fields, whereClause, sortOrder, limitCount, allRows, offset);
         
         // Execute the query
         List<SObject> queryResults = Database.query(query);
@@ -309,7 +310,7 @@ public with sharing class AndeeWorkbenchController {
 
 
         // Build the query string
-        string query = constructQuery(objectApiName, fields, whereClause, sortOrder, limitCount, allRows);
+        string query = constructQuery(objectApiName, fields, whereClause, sortOrder, limitCount, allRows, null);
 
         
         // Execute the query
@@ -396,7 +397,7 @@ public with sharing class AndeeWorkbenchController {
         list<string> fields = new list<string>();
         fields.add('count(Id)');
 
-        string query = constructQuery(objectApiName, fields, whereClause, null, null, allRows);
+        string query = constructQuery(objectApiName, fields, whereClause, null, null, allRows, null);
         
         // Execute the query
         List<SObject> queryResults = Database.query(query);
@@ -413,10 +414,11 @@ public with sharing class AndeeWorkbenchController {
      * @param : string whereClause : the SOQL where clause 
      * @param : string sortOrder : the SOQL Order By clause 
      * @param : string limitCount : the SOQL Limit  
-     * @param : boolean allRows : if to include deleted/archived rows or not  
+     * @param : boolean allRows : if to include deleted/archived rows or not
+     * @param : string offset : the offset to start from  
      * @return : string : SOQL statement
     */
-    public static string constructQuery(String objectApiName, list<string> fields, string whereClause, string sortOrder, string limitCount, boolean allRows) {
+    public static string constructQuery(String objectApiName, list<string> fields, string whereClause, string sortOrder, string limitCount, boolean allRows, string offset){
 
 
         // Build the query string
@@ -435,6 +437,10 @@ public with sharing class AndeeWorkbenchController {
         
         if(allRows != null && allRows){
             query += ' ALL ROWS ';
+        }
+        
+        if(offset != null && offset!=''){
+            query += ' OFFSET ' + offset;
         }
 
         system.debug('query: ' + query);
