@@ -435,12 +435,12 @@ public with sharing class AndeeWorkbenchController {
             query += ' LIMIT ' + limitCount;
         }
         
-        if(allRows != null && allRows){
-            query += ' ALL ROWS ';
-        }
-        
         if(offset != null && offset!=''){
             query += ' OFFSET ' + offset;
+        }
+        
+        if(allRows != null && allRows){
+            query += ' ALL ROWS ';
         }
 
         system.debug('query: ' + query);
