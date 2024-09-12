@@ -380,25 +380,28 @@
                         </table>
                     </div>
 
-                    <template if:true={prevDataToShow}>
-                        <lightning-button
-                            type="submit"
-                            label="Previous"
-                            class="slds-m-top_small"
-                            onclick={loadPreviousPageOfData}
-                            style="padding-top: 5px; margin-right: 10px;"
-                        ></lightning-button>
-                    </template>
+                    <div style="padding-top: 5px;">
+                        <template if:true={prevDataToShow}>
+                            <lightning-button
+                                type="submit"
+                                label="Previous"
+                                class="slds-m-top_small"
+                                onclick={loadPreviousPageOfData}
+                                style="padding-top: 5px; margin-right: 10px;"
+                            ></lightning-button>
+                        </template>
+    
+                        <template if:true={moreDataToShow}>
+                            <lightning-button
+                                type="submit"
+                                label="More"
+                                class="slds-m-top_small"
+                                onclick={loadNextPageOfData}
+                                style="padding-top: 5px; margin-right: 10px;"
+                            ></lightning-button>
+                        </template>
 
-                    <template if:true={moreDataToShow}>
-                        <lightning-button
-                            type="submit"
-                            label="More"
-                            class="slds-m-top_small"
-                            onclick={loadNextPageOfData}
-                            style="padding-top: 5px; margin-right: 10px;"
-                        ></lightning-button>
-                    </template>
+                    </div>
                 </template>
     
                 <template if:true={jobStatus}>
