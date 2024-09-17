@@ -6,7 +6,6 @@ import getFieldsForObject from '@salesforce/apex/AndeeWorkbenchController.GetFie
 import submitQuery from '@salesforce/apex/AndeeWorkbenchController.SubmitQuery';
 import submitQueryTsv from '@salesforce/apex/AndeeWorkbenchController.SubmitQueryTsv';
 import submitQueryBatch from '@salesforce/apex/BatchAndeeWorkbench.SubmitQueryBatch';
-//import submitQueryCount from '@salesforce/apex/AndeeWorkbenchController.SubmitQueryCount';
 import getBatchJobStatus from '@salesforce/apex/BatchAndeeWorkbench.GetBatchJobStatus';
 import GetSettings from '@salesforce/apex/AndeeWorkbenchController.GetSettings';
 import getSingleEntryData from '@salesforce/apex/AndeeWorkbenchController.GetSingleEntryData';
@@ -14,12 +13,12 @@ import updateSingleEntryData from '@salesforce/apex/AndeeWorkbenchController.Upd
 import deleteEntry from '@salesforce/apex/AndeeWorkbenchController.DeleteEntry';
 import undeleteEntry from '@salesforce/apex/AndeeWorkbenchController.UndeleteEntry';
 import insertSingleEntryData from '@salesforce/apex/AndeeWorkbenchController.InsertSingleEntryData';
-//import convertTimeZone from '@salesforce/apex/AndeeWorkbenchController.ConvertTimeZone';
 
 import andeeZombie from 'c/andeeZombie';
 import areYouSure from 'c/areYouSure';
 
-export default class AndeeWorkbench extends LightningElement {    
+export default class AndeeWorkbench extends LightningElement {
+    
     // Track variables for component state
     @track isLoading = true;
     @track error;
@@ -54,6 +53,9 @@ export default class AndeeWorkbench extends LightningElement {
     @track isShowFieldLabels = false;
     @track isShowObjectLabels = false;
 
+    @track primarySortField = '';
+    @track primarySortOrder = '';
+    
     allObjects = []; // contains an array of all the objects in the Salesforce instance (ApiName + Label)
 
     fieldArrayLowercase = []; // contains an array of the fields for the selected object, including the field name and whether it is filterable etc     
@@ -192,9 +194,11 @@ export default class AndeeWorkbench extends LightningElement {
                 offset : ''})
                 .then(data => {
                     // Process count query results
+
+
                     this.queryResults = [];
                     this.totalRowCountWithNoLimit = undefined;
-                    this.queryHeadings = ['Count()'];
+                    this.queryHeadings = [{name:'Count()'}];
                     this.queryResults = data.Rows;
 
                     // remove the query from the array
@@ -230,6 +234,7 @@ export default class AndeeWorkbench extends LightningElement {
                 offset : ''})
             .then(data => {
                 console.log(data);
+
                 // Process query results
                 this.queryHeadings = [];
                 this.queryResults = [];
@@ -240,7 +245,7 @@ export default class AndeeWorkbench extends LightningElement {
 
                 if(results.length>0){
                     for (var i = 0; i < results[0].Fields.length; i++) {
-                        headings = [ ...headings, results[0].Fields[i].Name]  ;
+                        headings = [ ...headings, {name:results[0].Fields[i].Name, isPrimarySort:results[0].Fields[i].Name.toLowerCase()==this.primarySortField, isPrimarySortOrderAsc:(results[0].Fields[i].Name.toLowerCase()==this.primarySortField)?this.primarySortOrder=='asc':null} ];
                     }
                     this.queryHeadings = headings;
                 }
@@ -276,8 +281,8 @@ export default class AndeeWorkbench extends LightningElement {
             
             })
             .catch(error => {
-                this.error = error.body.message;
                 console.error('error (submitQuery) => ', error);
+                this.error = error.body.message;
                 this.isLoading = false;
             })
         }
@@ -330,7 +335,7 @@ export default class AndeeWorkbench extends LightningElement {
             // Process TSV query results
             this.queryResults = [];
             this.totalRowCountWithNoLimit = undefined;
-            this.queryHeadings = ['Download CSV'];
+            this.queryHeadings = [{name:'Download CSV'}];
             const downloadLink = {};
             downloadLink.Value = 'Download';
             downloadLink.Linkable = true;
@@ -431,6 +436,9 @@ export default class AndeeWorkbench extends LightningElement {
             result.orderByClauses = partsLower.slice(orderByIndex + 2, orderByEnd).join(' ');
         }
 
+        this.determineSortFields(result.orderByClauses);
+
+
         // get Limit value
         const limitIndex = partsLower.indexOf('limit');
         if(limitIndex !== -1){
@@ -442,6 +450,36 @@ export default class AndeeWorkbench extends LightningElement {
 
         console.log('Parsed SOQL :' + JSON.stringify(result));
         return result;
+    }
+
+
+
+    determineSortFields(orderByClauses){
+        console.log('starting determineSortFields : ' + orderByClauses);
+        if(orderByClauses.length > 0){
+            this.primarySortField = orderByClauses.split(' ')[0].toLowerCase();
+            var firstSort = '';
+            if(orderByClauses.split(',').length > 1){
+                firstSort = orderByClauses.split(',')[0];
+                if(firstSort.split(' ').length > 1){
+                    this.primarySortOrder = firstSort.split(' ')[1];
+                } else {
+                    this.primarySortOrder = 'asc';
+                }
+            } else {
+                if(orderByClauses.split(' ').length > 1){
+                    this.primarySortOrder = orderByClauses.split(' ')[1];
+                } else {
+                    this.primarySortOrder = 'asc';
+                }
+            }
+
+        } else {
+            this.primarySortField = '';
+            this.primarySortOrder = '';
+        }
+
+        console.log('primarySortField:' + this.primarySortField + ' primarySortOrder:' + this.primarySortOrder);
     }
 
 
@@ -1046,11 +1084,16 @@ export default class AndeeWorkbench extends LightningElement {
             var results = [];
             this.totalRowCountWithNoLimit = data.TotalRowCountWithNoLimit;
             results = data.Rows;
+
+            // Need to reset the primarySortField & primarySortOrder as the query results may be in a different order
+            // if the user has clicked on a heading.
+            this.determineSortFields(this.parsedSoql.orderByClauses);
+
             var headings = [];
 
             if(results.length>0){
                 for (var i = 0; i < results[0].Fields.length; i++) {
-                    headings = [ ...headings, results[0].Fields[i].Name]  ;
+                    headings = [ ...headings, {name:results[0].Fields[i].Name, isPrimarySort:results[0].Fields[i].Name.toLowerCase()==this.primarySortField, isPrimarySortOrderAsc:(results[0].Fields[i].Name.toLowerCase()==this.primarySortField)?this.primarySortOrder=='asc':null} ];
                 }
                 this.queryHeadings = headings;
             }
@@ -1079,6 +1122,70 @@ export default class AndeeWorkbench extends LightningElement {
             this.isLoading = false;
         })
 
+    }
+
+
+    queryHeadingClick(event) {
+        const clickedHeading = event.currentTarget.dataset.heading;
+        console.log('queryHeadingClick:', clickedHeading);
+        this.isLoading = true;
+
+        if(clickedHeading.toLowerCase() == this.primarySortField){
+            if(this.primarySortOrder == 'asc'){
+                this.primarySortOrder = 'desc';
+            } else {
+                this.primarySortOrder = 'asc';
+            }
+        } else {
+            this.primarySortField = clickedHeading.toLowerCase();
+            this.primarySortOrder = 'asc';
+        }
+
+        var headings = [];
+        for(let i=0; i<this.queryHeadings.length; i++){
+            headings = [ ...headings, {name:this.queryHeadings[i].name, isPrimarySort:this.queryHeadings[i].name.toLowerCase()==this.primarySortField, isPrimarySortOrderAsc:(this.queryHeadings[i].name.toLowerCase()==this.primarySortField)?this.primarySortOrder=='asc':null} ];
+        }
+
+        // Force reactivity
+        this.queryHeadings = [...headings];
+
+        this.sortData();
+        
+        this.isLoading = false;
+    }
+
+
+    sortData(){
+        // sort the queryResults array by the primarySortField & primarySortOrder
+        console.log('starting sortData');
+
+        this.queryResults.sort((a, b) => {
+            var aValue = '';
+            var bValue = '';
+            for(var i=0; i<a.Fields.length; i++){
+                if(a.Fields[i].Name.toLowerCase() == this.primarySortField){
+                    aValue = a.Fields[i].Value;
+                    break;
+                }
+            }
+            for(var i=0; i<b.Fields.length; i++){
+                if(b.Fields[i].Name.toLowerCase() == this.primarySortField){
+                    bValue = b.Fields[i].Value;
+                    break;
+                }
+            }
+
+            if(aValue < bValue){
+                return this.primarySortOrder == 'asc' ? -1 : 1;
+            }
+            if(aValue > bValue){
+                return this.primarySortOrder == 'asc' ? 1 : -1;
+            }
+            return 0;
+        });
+
+        // Force reactivity
+        this.queryResults = [...this.queryResults];
     }
 
     /*datetimeChange(){
