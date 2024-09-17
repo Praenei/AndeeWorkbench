@@ -19,7 +19,7 @@
                         <div class="slds-media slds-no-space slds-grow">
                             <h2 class="slds-card__header-title">
                                 <span class="slds-truncate slds-m-right--xx-small" title="Workbench" onclick={zombieEasterEgg}>
-                                    Workbench 1.1.1
+                                    Workbench 1.1.3
                                 </span>
                             </h2>
                         </div>
@@ -337,6 +337,16 @@
                 <!--Query Results-->
             
                 <br>
+    
+                <template if:true={jobStatus}>
+                    <p>Status: {jobStatus.Status}</p>
+                    <p>Items Processed: {jobStatus.JobItemsProcessed} / {jobStatus.TotalJobItems}</p>
+                    
+                    <template if:true={isBatchJobCompleted}>
+                        <p><a href={contentVersionUrl} target="_blank">Download</a></p>
+                    </template>
+                </template>
+                
                 <template if:true={queryResults}>
 
                     <template if:true={totalRowCountWithNoLimit}>
@@ -346,12 +356,22 @@
                         </template>
                         <br>
                     </template>
+
                     <div class="scrollableContainer">
                         <table id="query_results" class="scrollable">
                             <thead>
                                 <tr>
                                     <template for:each={queryHeadings} for:item="qh" for:index="index">
-                                        <th key={qh.index}>{qh}</th>
+                                        <th key={qh.index} onclick={queryHeadingClick} data-heading={qh.name}>{qh.name}
+                                            <template if:true={qh.isPrimarySort}>
+                                                <template if:true={qh.isPrimarySortOrderAsc}>
+                                                    <lightning-icon icon-name="utility:arrowup" size="xx-small" class="slds-m-left_x-small"></lightning-icon>
+                                                </template>
+                                                <template if:false={qh.isPrimarySortOrderAsc}>
+                                                    <lightning-icon icon-name="utility:arrowdown" size="xx-small" class="slds-m-left_x-small"></lightning-icon>
+                                                </template>
+                                            </template>
+                                        </th>
                                     </template>
                                 </tr>
                             </thead>
@@ -402,15 +422,6 @@
                         </template>
 
                     </div>
-                </template>
-    
-                <template if:true={jobStatus}>
-                    <p>Status: {jobStatus.Status}</p>
-                    <p>Items Processed: {jobStatus.JobItemsProcessed} / {jobStatus.TotalJobItems}</p>
-                    
-                    <template if:true={isBatchJobCompleted}>
-                        <p><a href={contentVersionUrl} target="_blank">Download</a></p>
-                    </template>
                 </template>
             
 
