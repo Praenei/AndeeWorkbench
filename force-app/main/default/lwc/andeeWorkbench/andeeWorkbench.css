@@ -91,3 +91,13 @@ table.scrollable thead {
 .bottom-right-container lightning-input {
   width: 150px; /* Adjust as needed */
 }
+
+.link-preview-container {
+  display: flex;
+  align-items: center;
+}
+
+.preview-icon-container {
+  margin-left: 8px;
+  cursor: pointer;
+}
