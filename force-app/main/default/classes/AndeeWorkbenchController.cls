@@ -140,9 +140,18 @@ public with sharing class AndeeWorkbenchController {
 
         boolean idAutoAdded = false;
 
-        // Always perform a count()
-        integer count = SubmitQueryCount(objectApiName, whereClause, allRows);
-        result.TotalRowCountWithNoLimit = count;
+        // Always perform a count().
+        // Only throw an error on count is specifically wanting a count().
+        // Done as some objects, e.g. TwoFactorMethodsInfo, do not allow counts so querying on them was causing an error.
+        integer count;
+        try {
+            count = SubmitQueryCount(objectApiName, whereClause, allRows);
+            result.TotalRowCountWithNoLimit = count;
+        } catch(Exception e){
+            if(fields.size() == 1 && fields[0].toLowerCase() == 'count()'){
+                throw e;
+            }
+        }
 
 
         // handle if count() is in the fields
@@ -218,9 +227,17 @@ public with sharing class AndeeWorkbenchController {
                     fieldData.Value = FormatFieldValue(obj.get(field), fieldType);
                     
                 }
-                if(field != 'Id' || (field == 'Id' &&  !idAutoAdded)){
-                    wrapper.Fields.add(fieldData);
+
+                if(fieldType == 'REFERENCE' || field == 'Id'){
+                    fieldData.FieldType = 'url';
+                    fieldData.Linkable = true;
+                } else {
+                    fieldData.FieldType = fieldType;
                 }
+
+                fieldData.DisplayField = (field != 'Id' || (field == 'Id' &&  !idAutoAdded));
+                wrapper.Fields.add(fieldData);
+
             }
 
             rows.add(wrapper);
@@ -420,6 +437,9 @@ public with sharing class AndeeWorkbenchController {
     */
     public static string constructQuery(String objectApiName, list<string> fields, string whereClause, string sortOrder, string limitCount, boolean allRows, string offset){
 
+        /*for(integer i=0; i<fields.size(); i++){
+            system.debug('field (' + i + '): ' + fields[i]);
+        }*/
 
         // Build the query string
         String query = 'SELECT ' + String.join(fields, ', ') + ' FROM ' + objectApiName;
@@ -443,7 +463,10 @@ public with sharing class AndeeWorkbenchController {
             query += ' ALL ROWS ';
         }
 
-        system.debug('query: ' + query);
+        // Debug - break long string into multiple rows
+        for(integer j=0; j<=(query.length()/200); j++){
+            system.debug((j==0?'query: ':'') + query.substring(200*j, Math.min(200*(j+1), query.length())));
+        }
 
         return query;
     }
@@ -756,6 +779,8 @@ public with sharing class AndeeWorkbenchController {
         @AuraEnabled public String Name;
         @AuraEnabled public String Value;
         @AuraEnabled public Boolean Linkable;
+        @AuraEnabled public String FieldType;
+        @AuraEnabled public Boolean DisplayField;
     }
     
     public class QuerySingleRowWrapper {

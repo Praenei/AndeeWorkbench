@@ -257,7 +257,7 @@ export default class AndeeWorkbench extends LightningElement {
                     for(var j=0; j<this.queryResults[i].Fields.length; j++){
                         if (this.fieldArrayLowercase[this.queryResults[i].Fields[j].Name.toLowerCase()]?.Linkable !== undefined) {
                             this.queryResults[i].Fields[j].Linkable = this.fieldArrayLowercase[this.queryResults[i].Fields[j].Name.toLowerCase()].Linkable;
-                            if (this.queryResults[i].Fields[j].Linkable) {
+                            if (this.queryResults[i].Fields[j].Linkable && this.queryResults[i].Fields[j].Value !== undefined && this.queryResults[i].Fields[j].Value.length > 0) {
                                 this.queryResults[i].Fields[j].HRef = this.orgDomainUrl + '/' + this.queryResults[i].Fields[j].Value;
                             }
                         }
@@ -399,7 +399,7 @@ export default class AndeeWorkbench extends LightningElement {
 
 
     parseSoql(soqlString){
-        console.log('starting parseSoql');
+        console.log('starting parseSoql: ' + soqlString);
         const result = {
             objectName: '',
             fields: [],
@@ -412,9 +412,8 @@ export default class AndeeWorkbench extends LightningElement {
         const parts = soqlString.replace(/\s+/g,' ').split(' ');
 
         // get fields
-        const selectIndex = partsLower.indexOf('select');
         const fromIndex = partsLower.indexOf('from');
-        result.fields = soqlString.slice(soqlString.toLowerCase().indexOf('select') + 6, soqlString.toLowerCase().indexOf('from')).trim().split(',').map(f => f.trim());
+        result.fields = soqlString.slice(soqlString.toLowerCase().indexOf('select ') + 7, soqlString.toLowerCase().indexOf(' from ')).trim().split(',').map(f => f.trim());
 
         // get object name
         result.objectName = partsLower[fromIndex + 1];
@@ -1188,6 +1187,11 @@ export default class AndeeWorkbench extends LightningElement {
         this.queryResults = [...this.queryResults];
     }
 
+    previewClick(event) {
+        const url = event.currentTarget.dataset.id;
+        window.open(url, '_blank');
+    }
+
     /*datetimeChange(){
 
         
@@ -1313,6 +1317,11 @@ export default class AndeeWorkbench extends LightningElement {
     get displayLastDataRowNumber() {
         return Math.min((this.pageOfData * this.limit), this.totalRowCountWithNoLimit);
     }
+
+    /*get isPrimarySortField() {
+        console.log('starting isPrimarySortField : ' + this.qh + ' : ' + this.primarySortField);
+        return this.qh === this.primarySortField;
+    }*/
 
 
 }

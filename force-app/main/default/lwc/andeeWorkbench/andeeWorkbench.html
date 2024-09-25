@@ -19,7 +19,7 @@
                         <div class="slds-media slds-no-space slds-grow">
                             <h2 class="slds-card__header-title">
                                 <span class="slds-truncate slds-m-right--xx-small" title="Workbench" onclick={zombieEasterEgg}>
-                                    Workbench 1.1.3
+                                    Workbench 1.2
                                 </span>
                             </h2>
                         </div>
@@ -71,20 +71,6 @@
                                                         Include
                                                     </label>
                                                 </td>
-                                                <!--<td valign="top" align="left">
-                                                    Date/time converter:<br>
-                                                    <label>
-                                                        <input type="radio" name="datetime_converter" value="local" data-id="localToUtc" onclick={datetimeChange}>
-                                                        Local => UTC
-                                                    </label><br/>
-                                                    <label>
-                                                        <input type="radio" name="datetime_converter" value="utc" checked onclick={datetimeChange}>
-                                                        UTC => Local
-                                                    </label><br/>
-                                                    <input type="datetime-local" data-id="datetimeIn" name="datetime"  step="1" value={convertDateTime}/>
-                                                    &nbsp;<input type="submit" name="querySubmit" value="=>" onclick={datetimeChange}/>&nbsp;
-                                                    <label data-id="convertedDatetimeId"></label>
-                                                </td>-->
                                             </tr>
                                         </tbody>
                                     </table>
@@ -382,10 +368,17 @@
                                         <td key={field.Name}>
                                             <template if:true={field.Linkable}>
                                                 <template if:false={field.IsDownloadLink}>
-                                                    <a data-id={field.Value} onclick={displaySingleRow}>{field.Value}</a>
+                                                    <div class="link-preview-container">
+                                                        <a data-id={field.Value} onclick={displaySingleRow}>{field.Value}</a>
+                                                        <template if:true={field.HRef}>
+                                                            <div key={field.Value} class="preview-icon-container" onclick={previewClick} data-id={field.HRef}>
+                                                                <lightning-icon icon-name='utility:preview' alternative-text='preview' size='xx-small' title='preview'></lightning-icon>
+                                                            </div>
+                                                        </template>
+                                                    </div>
                                                 </template>
                                                 <template if:true={field.IsDownloadLink}>
-                                                    <a href={field.HRef} target="_blank">{field.Value}</a>
+                                                    <a href={field.HRef} target="_blank">{field.Value}</a> <lightning-icon icon-name="utility:download" size="xx-small" class="slds-m-left_x-small"></lightning-icon></a>
                                                 </template>
                                             </template>
                                             <template if:false={field.Linkable}>
