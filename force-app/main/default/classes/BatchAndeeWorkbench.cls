@@ -1,11 +1,4 @@
-/**
-(c) Invesco 2024, all rights reserved
-@date 01-Jul-2024      
-@author Andee Weir
-@description Implementation of Workbench for batch processing of large data sets
-@modifications  
-01-Jul-2024 Andee Weir             CDSME-xxxxx : Initial implementation
-*/
+
 public with sharing class BatchAndeeWorkbench implements Database.Batchable<sObject>, Database.Stateful {
 
     private string objectApiName;
