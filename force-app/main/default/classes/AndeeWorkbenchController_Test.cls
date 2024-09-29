@@ -1,11 +1,4 @@
-/**
-(c) Invesco 2024, all rights reserved
-@date 01-Jul-2024      
-@author Andee Weir
-@description Test class for AndeeWorkbenchController
-@modifications  
-dd-Mmm-yyyy AuthorName             JIRA-ID : Description 
-*/
+
 @isTest
 private class AndeeWorkbenchController_Test {
     
