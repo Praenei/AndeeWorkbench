@@ -1,11 +1,3 @@
-/**
-(c) Invesco 2024, all rights reserve
-@date 01-Jul-2024      
-@author Andee Weir
-@description Implementation of Workbench
-@modifications  
-dd-Mmm-yyyy AuthorName             JIRA-ID : Description 
-*/
 public with sharing class AndeeWorkbenchController {
 
     private static map<string, string> fieldTypeMap = new map<string, string>();
