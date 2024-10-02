@@ -19,7 +19,7 @@
                         <div class="slds-media slds-no-space slds-grow">
                             <h2 class="slds-card__header-title">
                                 <span class="slds-truncate slds-m-right--xx-small" title="Workbench" onclick={zombieEasterEgg}>
-                                    Workbench 1.2
+                                    Workbench 1.3
                                 </span>
                             </h2>
                         </div>
@@ -457,6 +457,13 @@
                         onclick={updateView}
                         style="margin-right: 10px;"
                     ></lightning-button>
+                    <lightning-button
+                        type="submit"
+                        label="Clone"
+                        class="slds-m-top_small"
+                        onclick={cloneRow}
+                        style="margin-right: 10px;"
+                    ></lightning-button>
                     <template if:false={isUpdateView}>
                         <template if:false={isDeleted}>
                             <lightning-button
@@ -541,6 +548,13 @@
                         onclick={updateView}
                         style="margin-right: 10px;"
                     ></lightning-button>
+                    <lightning-button
+                        type="submit"
+                        label="Clone"
+                        class="slds-m-top_small"
+                        onclick={cloneRow}
+                        style="margin-right: 10px;"
+                    ></lightning-button>
                     <template if:false={isUpdateView}>
                         <template if:false={isDeleted}>
                             <lightning-button
@@ -608,7 +622,7 @@
                                         {record.Name}
                                     </td>
                                     <td style="border-color: white;">
-                                        <input type="text" data-id={record.Name} size="30" name="insertField" data-fieldname={record.Name} value={record.DefaultValue}/>
+                                        <input type="text" data-id={record.Name} size="30" name="insertField" data-fieldname={record.Name} value={record.Value}/>
                                     </td>
                                 </tr>
                             </template>
@@ -619,7 +633,7 @@
                                             {record.Name}
                                         </td>
                                         <td style="border-color: white;">
-                                            <input type="text" data-id={record.Name} size="30" name="updateField" data-fieldname={record.Name} value={record.DefaultValue}/>
+                                            <input type="text" data-id={record.Name} size="30" name="updateField" data-fieldname={record.Name} value={record.Value}/>
                                         </td>
                                     </tr>
                                     </template>

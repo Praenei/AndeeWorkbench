@@ -445,7 +445,7 @@ export default class AndeeWorkbench extends LightningElement {
             this.limit = result.limitValue;
         } else {
             this.limit = '';
-        }
+        }        
 
         console.log('Parsed SOQL :' + JSON.stringify(result));
         return result;
@@ -881,6 +881,14 @@ export default class AndeeWorkbench extends LightningElement {
         this.isLoading = true;
         this.error = undefined;
         this.isInsertView = true;
+        // set this.fieldArrayCaseSensitive property Value to have the value of DefaultValue if it exists
+        for(var i=0; i<this.fieldArrayCaseSensitive.length; i++){
+            if(this.fieldArrayCaseSensitive[i].DefaultValue != undefined){
+                this.fieldArrayCaseSensitive[i].Value = this.fieldArrayCaseSensitive[i].DefaultValue;
+            } else {
+                this.fieldArrayCaseSensitive[i].Value = '';
+            }
+        }
         this.isLoading = false;
 
     }
@@ -890,6 +898,7 @@ export default class AndeeWorkbench extends LightningElement {
         this.isLoading = true;
         var insertedData = [];
         
+        // Set the Value to the DefaultValues for a straight insert.  Required as Clone can populate Value so need to reset.
         for(var i=0; i<this.fieldArrayCaseSensitive.length; i++){
             if(this.template.querySelector('[data-id="'+this.fieldArrayCaseSensitive[i].Name+'"]')){ // required as Id is not included on the insert fields
                 if(this.template.querySelector('[data-id="'+this.fieldArrayCaseSensitive[i].Name+'"]').value != ''){
@@ -914,6 +923,7 @@ export default class AndeeWorkbench extends LightningElement {
         .then(data => {
             this.error = undefined;
             this.isInsertView = false;
+            this.chainOfSingleRowIds = []; // remove 'back' history as could have come from a Clone record 
             this.isLoading = false;
         })
         .catch(error => {
@@ -952,6 +962,28 @@ export default class AndeeWorkbench extends LightningElement {
             this.isLoading = false;
         })
         
+    }
+
+    cloneRow(event){
+        console.log('starting cloneRow');
+        this.isLoading = true;
+        this.error = undefined;
+
+        for(var i=0; i<this.fieldArrayCaseSensitive.length; i++){
+            if(this.fieldArrayCaseSensitive[i].Updatable){
+                for(var j=0; j<this.rowData.length; j++){
+                    if(this.rowData[j].Name == this.fieldArrayCaseSensitive[i].Name){
+                        this.fieldArrayCaseSensitive[i].Value = this.rowData[j].Value;
+                        break;
+                    }
+                }
+            }
+        } 
+
+        this.isDisplaySingleId = false;
+        this.isInsertView = true;       
+        this.isLoading = false;
+
     }
 
 
