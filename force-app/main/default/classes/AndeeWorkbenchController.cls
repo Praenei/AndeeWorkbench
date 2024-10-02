@@ -1,4 +1,11 @@
-
+/**
+(c) Invesco 2024, all rights reserve
+@date 01-Jul-2024      
+@author Andee Weir
+@description Implementation of Workbench
+@modifications  
+dd-Mmm-yyyy AuthorName             JIRA-ID : Description 
+*/
 public with sharing class AndeeWorkbenchController {
 
     private static map<string, string> fieldTypeMap = new map<string, string>();
@@ -545,6 +552,8 @@ public with sharing class AndeeWorkbenchController {
                     obj.put(field.Name, DateTime.valueOf(newDateTime));
                 } else if(field.Type == 'DECIMAL'){
                     obj.put(field.Name, Decimal.valueOf(field.Value));
+                } else if(field.Type == 'CURRENCY'){
+                    obj.put(field.Name, Decimal.valueOf(field.Value));
                 } else if(field.Type == 'DOUBLE'){
                     obj.put(field.Name, Double.valueOf(field.Value));
                 } else if(field.Type == 'INTEGER'){
@@ -590,6 +599,8 @@ public with sharing class AndeeWorkbenchController {
                     string newDateTime = field.Value.replace('T', ' ').replace('Z', '');
                     obj.put(field.Name, DateTime.valueOf(newDateTime));
                 } else if(field.Type == 'DECIMAL'){
+                    obj.put(field.Name, Decimal.valueOf(field.Value));
+                } else if(field.Type == 'CURRENCY'){
                     obj.put(field.Name, Decimal.valueOf(field.Value));
                 } else if(field.Type == 'DOUBLE'){
                     obj.put(field.Name, Double.valueOf(field.Value));
