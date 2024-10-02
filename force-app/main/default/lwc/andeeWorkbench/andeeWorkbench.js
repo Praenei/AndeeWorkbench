@@ -885,6 +885,8 @@ export default class AndeeWorkbench extends LightningElement {
         for(var i=0; i<this.fieldArrayCaseSensitive.length; i++){
             if(this.fieldArrayCaseSensitive[i].DefaultValue != undefined){
                 this.fieldArrayCaseSensitive[i].Value = this.fieldArrayCaseSensitive[i].DefaultValue;
+            } else {
+                this.fieldArrayCaseSensitive[i].Value = '';
             }
         }
         this.isLoading = false;
