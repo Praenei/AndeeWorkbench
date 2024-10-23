@@ -13,6 +13,7 @@ import updateSingleEntryData from '@salesforce/apex/AndeeWorkbenchController.Upd
 import deleteEntry from '@salesforce/apex/AndeeWorkbenchController.DeleteEntry';
 import undeleteEntry from '@salesforce/apex/AndeeWorkbenchController.UndeleteEntry';
 import insertSingleEntryData from '@salesforce/apex/AndeeWorkbenchController.InsertSingleEntryData';
+import GetIsSandbox from '@salesforce/apex/AndeeWorkbenchController.RunningInASandbox';
 
 import andeeZombie from 'c/andeeZombie';
 import areYouSure from 'c/areYouSure';
@@ -48,7 +49,7 @@ export default class AndeeWorkbench extends LightningElement {
     @track isDeleted = false;
     @track isZombieGame = false;
     @track limit = "500";
-    @track hideInfoDiv = false;
+    @track hideInfoDiv = true;
     @track convertDateTime;
     @track isShowFieldLabels = false;
     @track isShowObjectLabels = false;
@@ -75,6 +76,8 @@ export default class AndeeWorkbench extends LightningElement {
     querySavePosition = 0;
 
     pageOfData = 0;
+
+    isSandbox = false;
     
 
     // Initialization function when component is loaded
@@ -87,6 +90,22 @@ export default class AndeeWorkbench extends LightningElement {
         .then(result => {
             this.orgDomainUrl = result.OrgDomainUrl;
             this.usersTimezone = result.UsersTimezone
+
+            console.log('running GetIsSandbox');
+            GetIsSandbox()
+            .then(result => {
+                this.isSandbox = result;
+                console.log('isSandbox: ' + this.isSandbox);
+            })
+            .catch(error => {
+                window.console.log('error (connectedCallback.GetIsSandbox) =====> '+JSON.stringify(error));
+                if(error) {
+                    this.error = error.body.message;
+                    window.console.log('@@@@ ERROR '+ error);
+                }
+            })
+
+
         })
         .catch(error => {
             window.console.log('error (connectedCallback) =====> '+JSON.stringify(error));
@@ -95,6 +114,13 @@ export default class AndeeWorkbench extends LightningElement {
                 window.console.log('@@@@ ERROR '+ error);
             }
         })
+    }
+
+    // Stop the browswer's back button from working
+    renderedCallback() {
+        if (this.isBackNavigationPrevented) return;
+        this.isBackNavigationPrevented = true;
+        this.template.querySelector('c-disable-back-button').preventBackNavigation();
     }
 
     // Wire adapter to get all Salesforce objects
@@ -122,7 +148,7 @@ export default class AndeeWorkbench extends LightningElement {
 
     // Function to get fields for a selected object
     async getFields(){
-        console.log('starting getFields');
+        console.log('starting getFields : ' + this.objectValue);
         getFieldsForObject({objectName : this.objectValue})
         .then(data => {
             var returnOpts = [];
@@ -132,7 +158,7 @@ export default class AndeeWorkbench extends LightningElement {
             allValues = data;
             for (var i = 0; i < allValues.length; i++) {
                 // Create options for field select dropdown
-                returnOpts = [ ...returnOpts, {label: allValues[i].Name, value: allValues[i].Name, selected: false} ];
+                returnOpts = [ ...returnOpts, {label: allValues[i].Name, value: allValues[i].Name, selected: false, key:this.objectValue+'-'+allValues[i].Name} ];
                 if(allValues[i].Filterable){
                     // Create options for where clause fields
                     whereOpts = [ ...whereOpts, {label: allValues[i].Name, value: allValues[i].Name, selected: false} ];
@@ -143,6 +169,8 @@ export default class AndeeWorkbench extends LightningElement {
             this.fieldArrayCaseSensitive = allValues;
             this.fieldOptions = returnOpts;
             this.fieldWhereOptions = whereOpts;
+
+            this.selectedFields = [];
 
             this.rebuildQuery();
 
@@ -634,9 +662,7 @@ export default class AndeeWorkbench extends LightningElement {
             }
 
         }
-        console.log('starting rebuildQuery ' + Date.now() + ' (elapsed ' + (Date.now() - startTime) + 'ms');
         this.rebuildQuery();
-        console.log('post rebuildQuery ' + Date.now() + ' (elapsed ' + (Date.now() - startTime) + 'ms');
     }
 
     rebuildQuery(event){
@@ -693,7 +719,7 @@ export default class AndeeWorkbench extends LightningElement {
     }
 
 
-    async resyncSoql(){
+    resyncSoql(){
         console.log('starting resyncSoql');
 
         this.isLoading = true;
@@ -704,13 +730,10 @@ export default class AndeeWorkbench extends LightningElement {
 
         console.log('Object comparision ' + parsedObjValueLowercase + ':' + this.objectValue);
 
-        if(parsedObjValueLowercase !== this.objectValue){
+        if(parsedObjValueLowercase.toLowerCase() !== this.objectValue.toLowerCase()){
 
-            await this.resyncObject(parsedObjValueLowercase);
-
-            //console.log('get fields for object ' + this.objectValue);   
-
-            //await this.getFields();    // Flakey so commented out for now
+            alert('Not implemented yet when objects differ');
+            //this.resyncObject(parsedObjValueLowercase);
             this.isLoading = false;
         } else {
 
@@ -731,9 +754,9 @@ export default class AndeeWorkbench extends LightningElement {
         }
     }
 
-    async resyncObject(parsedObjValueLowercase){
+    resyncObject(parsedObjValueLowercase){
 
-        console.log('starting resyncObject');
+        console.log('starting resyncObject: ' + parsedObjValueLowercase);
         var tempObjectOptions = [];
         for(let i=0; i<this.objectOptions.length; i++){
             
@@ -745,13 +768,16 @@ export default class AndeeWorkbench extends LightningElement {
             }
         }
 
+        // force rerender of the object select dropdown
         this.objectOptions = tempObjectOptions;
+        this.objectOptions = [...this.objectOptions];
 
         for(let i=0; i<this.objectOptions.length; i++){
             if(this.objectOptions[i].selected){
                 console.log('Selected object is ' + this.objectOptions[i].value);
             }
         }
+
     }
 
 
@@ -791,88 +817,87 @@ export default class AndeeWorkbench extends LightningElement {
         })
     }
 
-
-    updateView(event){
-        console.log('starting updateView')
-        
+    displayUpdateView(event){
+        console.log('starting displayUpdateView');
         this.isLoading = true;
+        this.isUpdateView = true;
+        this.isLoading = false;
+    }
 
-        if(this.isUpdateView){
-
-            // Get all the document elements with the name of 'updateField' and loop through them
-            // For each element, get the value and add it to the rowData array
-            var updateFields = this.template.querySelectorAll('[data-id="updateField"]');
-            for (var i = 0; i < updateFields.length; i++) {
-                var updateField = updateFields[i];
-                var updateFieldName = updateField.dataset.fieldname;
-                var updateFieldValue = updateField.value;
-                // loop through rowData array & find element where the property name is the same as the updateFieldName
-                for(var j=0; j<this.rowData.length; j++){
-                    if(this.rowData[j].Name == updateFieldName){
-                       this.rowData[j].Value = updateFieldValue;
-                       break;
-                    }                    
-                }
-
+    updateRow(event){
+        console.log('starting updateRow');
+        this.isLoading = true;
+        // Get all the document elements with the name of 'updateField' and loop through them
+        // For each element, get the value and add it to the rowData array
+        var updateFields = this.template.querySelectorAll('[data-id="updateField"]');
+        for (var i = 0; i < updateFields.length; i++) {
+            var updateField = updateFields[i];
+            var updateFieldName = updateField.dataset.fieldname;
+            var updateFieldValue = updateField.value;
+            // loop through rowData array & find element where the property name is the same as the updateFieldName
+            for(var j=0; j<this.rowData.length; j++){
+                if(this.rowData[j].Name == updateFieldName){
+                    this.rowData[j].Value = updateFieldValue;
+                    break;
+                }                    
             }
 
-            //create a variable called parm which has 2 properties called ObjectApiName & Fields
-            // Set these properties to have the values of this.selectedSingleRecordObject & this.rowData respectively
-            var parm = {
-                ObjectApiName : this.selectedSingleRecordObject,
-                Fields : this.rowData
-            };
-
-            const parmJson = JSON.stringify(parm);
-
-            updateSingleEntryData({querySingleRowJson : parmJson})
-            .then(data => {
-                this.error = undefined;
-                this.isUpdateView = false
-                this.isLoading = false;
-            
-            })
-            .catch(error => {
-                console.error('error (updateView) => ', error); // error handling
-                if(error.body && error.body.fieldErrors){
-                    const fieldErrors = error.body.fieldErrors;
-                    this.error = '';
-                    for (let field in fieldErrors) {
-                        if (fieldErrors.hasOwnProperty(field)) {
-                            const errors = fieldErrors[field];
-                            if (Array.isArray(errors) && errors.length > 0) {
-                                errors.forEach(err => {
-                                    if (err.message) {
-                                        this.error = this.error + err.message + '\n';
-                                    }
-                                });
-                            }
-                        }
-                    }                
-                
-                } 
-                
-                if(error.body && error.body.pageErrors){
-                    if (Array.isArray(error.body.pageErrors) && error.body.pageErrors.length > 0) {
-                        error.body.pageErrors.forEach(err => {
-                            if (err.message) {
-                                this.error = this.error + err.message + '\n';
-                            }
-                        });
-                    }
-                } else if(error.body && error.body.message){
-                    this.error = this.error + error.body.message;
-                } else {
-                    this.error = this.error + 'Error occurred.  See console log for more details';
-                }
-                this.isLoading = false;
-            })
-
-        } else {
-            this.isUpdateView = true;
-            this.isLoading = false;
         }
+
+        //create a variable called parm which has 2 properties called ObjectApiName & Fields
+        // Set these properties to have the values of this.selectedSingleRecordObject & this.rowData respectively
+        var parm = {
+            ObjectApiName : this.selectedSingleRecordObject,
+            Fields : this.rowData
+        };
+
+        const parmJson = JSON.stringify(parm);
+
+        updateSingleEntryData({querySingleRowJson : parmJson})
+        .then(data => {
+            this.error = undefined;
+            this.chainOfSingleRowIds = [];
+            this.isUpdateView = false;
+            this.isDisplaySingleId = false;
+            this.jumpToTop();
+            this.isLoading = false;
         
+        })
+        .catch(error => {
+            console.error('error (updateView) => ', error); // error handling
+            if(error.body && error.body.fieldErrors){
+                const fieldErrors = error.body.fieldErrors;
+                this.error = '';
+                for (let field in fieldErrors) {
+                    if (fieldErrors.hasOwnProperty(field)) {
+                        const errors = fieldErrors[field];
+                        if (Array.isArray(errors) && errors.length > 0) {
+                            errors.forEach(err => {
+                                if (err.message) {
+                                    this.error = this.error + err.message + '\n';
+                                }
+                            });
+                        }
+                    }
+                }                
+            
+            } 
+            
+            if(error.body && error.body.pageErrors){
+                if (Array.isArray(error.body.pageErrors) && error.body.pageErrors.length > 0) {
+                    error.body.pageErrors.forEach(err => {
+                        if (err.message) {
+                            this.error = this.error + err.message + '\n';
+                        }
+                    });
+                }
+            } else if(error.body && error.body.message){
+                this.error = this.error + error.body.message;
+            } else {
+                this.error = this.error + 'Error occurred.  See console log for more details';
+            }
+            this.isLoading = false;
+        })
     }
     
 
@@ -923,6 +948,9 @@ export default class AndeeWorkbench extends LightningElement {
         .then(data => {
             this.error = undefined;
             this.isInsertView = false;
+            this.isUpdateView = false;
+            this.isDisplaySingleId = false;
+            this.jumpToTop();
             this.chainOfSingleRowIds = []; // remove 'back' history as could have come from a Clone record 
             this.isLoading = false;
         })
@@ -1224,6 +1252,15 @@ export default class AndeeWorkbench extends LightningElement {
         window.open(url, '_blank');
     }
 
+    jumpToTop() {
+        console.log('starting jumpToTop');
+        window.scrollTo({
+            top: 0,
+            behavior: 'auto'
+        });
+        console.log('ending jumpToTop');
+    }
+
     /*datetimeChange(){
 
         
@@ -1310,12 +1347,12 @@ export default class AndeeWorkbench extends LightningElement {
         }));
     }
 
-    get forwardArrowVariant() {
-        return this.querySavePosition < this.querySave.length - 1 ? 'success' : 'inverse';
+    get historyUpDisabled() {
+        return this.querySavePosition < this.querySave.length - 1 ? false : true;
     }
 
-    get backArrowVariant() {
-        return this.querySavePosition > 0 ? 'success' : 'inverse';
+    get historyDownDisabled() {
+        return this.querySavePosition > 0 && this.querySave.length > 1 ? false : true;
     }
 
     get querySaveDisplayPosition() {
@@ -1348,6 +1385,14 @@ export default class AndeeWorkbench extends LightningElement {
 
     get displayLastDataRowNumber() {
         return Math.min((this.pageOfData * this.limit), this.totalRowCountWithNoLimit);
+    }
+
+    get mainDivClass() {
+        if(this.isSandbox){
+            return 'slds-card-wrapper';
+        } else {
+            return 'slds-card-wrapper background-prod';
+        }
     }
 
     /*get isPrimarySortField() {
