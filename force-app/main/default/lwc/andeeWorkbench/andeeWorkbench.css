@@ -1,6 +1,8 @@
 @charset "ISO-8859-1";
 
-
+.background-prod {
+  background-color: pink;
+}
 
 table.description {
   border-color: #888;
@@ -41,7 +43,9 @@ table.dataTable td table.dataTable {
   width: 100%;
 }
 
-
+.highlight-row {
+  background-color : #ffffff;
+}
 
 .highlight-row:hover {
   background-color : #f0f0f0;
@@ -88,7 +92,14 @@ table.scrollable thead {
   z-index: 9999;
 }
 
-.bottom-right-container lightning-input {
+.bottom-right-container2 {
+  position: fixed;
+  bottom: 60px;
+  right: 20px;
+  z-index: 9999;
+}
+
+.top-right-container lightning-input {
   width: 150px; /* Adjust as needed */
 }
 
@@ -100,4 +111,17 @@ table.scrollable thead {
 .preview-icon-container {
   margin-left: 8px;
   cursor: pointer;
+}
+
+.spinner-container {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background-color: rgba(255, 255, 255, 0.5);
+  z-index: 9999;
 }

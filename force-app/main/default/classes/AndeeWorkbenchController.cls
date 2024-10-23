@@ -130,8 +130,6 @@ public with sharing class AndeeWorkbenchController {
         ResultWrapper result = new ResultWrapper();
         list<RowWrapper> rows = new list<RowWrapper>();
 
-        boolean idAutoAdded = false;
-
         // Always perform a count().
         // Only throw an error on count is specifically wanting a count().
         // Done as some objects, e.g. TwoFactorMethodsInfo, do not allow counts so querying on them was causing an error.
@@ -156,7 +154,7 @@ public with sharing class AndeeWorkbenchController {
 
 
             RowWrapper rw = new RowWrapper();
-            rw.RowId = '0';
+            rw.RowId = 0;
             rw.Fields = new List<FieldData>();
             rw.Fields.add(fw);
 
@@ -165,29 +163,18 @@ public with sharing class AndeeWorkbenchController {
             return result;
         }
 
-        boolean idExists = false;
-        // Add Id to the fields if it is not already there
-        for(integer i=0; i<fields.size(); i++){
-            if(fields[i].toLowerCase() == 'id'){
-                idExists = true;
-                break;
-            }
-        }
-
-        if(!idExists){  
-            fields.add('Id');
-            idAutoAdded = true;
-        }
-
         string query = constructQuery(objectApiName, fields, whereClause, sortOrder, limitCount, allRows, offset);
         
         // Execute the query
         List<SObject> queryResults = Database.query(query);
 
         // Iterate through the results
+        integer rowId = 0;
         for (SObject obj : queryResults) {
             RowWrapper wrapper = new RowWrapper();
-            wrapper.RowId = (String)obj.get('Id');
+            // convert rowId to string
+
+            wrapper.RowId = rowId++;
             wrapper.Fields = new List<FieldData>();
 
             for (String field : fields) {
@@ -227,7 +214,6 @@ public with sharing class AndeeWorkbenchController {
                     fieldData.FieldType = fieldType;
                 }
 
-                fieldData.DisplayField = (field != 'Id' || (field == 'Id' &&  !idAutoAdded));
                 wrapper.Fields.add(fieldData);
 
             }
@@ -639,7 +625,18 @@ public with sharing class AndeeWorkbenchController {
 
         undelete obj;
 
-    }   
+    }  
+    
+    
+    
+     /* @method: RunningInASandbox
+     * @description:  Determines if running in a sandbox
+     * @return : Boolean : true if sandbox, false if not
+    */   
+    @AuraEnabled(cacheable=true)
+    public static Boolean RunningInASandbox() {
+        return [SELECT Id, IsSandbox FROM Organization LIMIT 1].IsSandbox;
+    }
     
     
     /* @method: ConvertTimezone
@@ -767,7 +764,7 @@ public with sharing class AndeeWorkbenchController {
     }    
     
     public class RowWrapper {
-        @AuraEnabled public String RowId;
+        @AuraEnabled public Integer RowId;
         @AuraEnabled public List<FieldData> Fields;
     }
 
@@ -776,7 +773,6 @@ public with sharing class AndeeWorkbenchController {
         @AuraEnabled public String Value;
         @AuraEnabled public Boolean Linkable;
         @AuraEnabled public String FieldType;
-        @AuraEnabled public Boolean DisplayField;
     }
     
     public class QuerySingleRowWrapper {
