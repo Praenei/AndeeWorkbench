@@ -35,10 +35,12 @@ Order if not deploying all at once via Ant etc.
 2) All Static Resources
 3) LWC - areYouSure
 4) LWC - andeeZombie
-5) LWC - andeeWorkbench
+5) LWC - disableBackButton
+6) LWC - andeeWorkbench
+7) Aura - AndeeWorkbenchWrapper
 
 Easiest way is to download the metadata to your VSC folder & then just deploy from there.
 
-Once completed I'd suggest Setup | Lightning App Builder | New.  Create an App Page, Label : Workbench, One Region, add the custom andeeWorkbench & Save.  Finally activate the page by adding the required profiles/lightning apps as required.
+Once completed I'd suggest Setup | Lightning App Builder | New.  Create an App Page, Label : Workbench, One Region, add the custom AndeeWorkbenchWrapper & Save.  Finally activate the page by adding the required profiles/lightning apps as required.
 
 
