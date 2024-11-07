@@ -3,7 +3,7 @@ public with sharing class AndeeWorkbenchController {
     private static map<string, string> fieldTypeMap = new map<string, string>();
 
     public static final String DATETIME_PATTERN = '^(\\d{4})-(?:(0[1-9])|(1[0-2]))-((?:0[1-9])|(?:[12]\\d)|(?:3[01])) ((?:[01]\\d)|(?:2[0-3])):([0-5]\\d):([0-5]\\d)$';
-   
+    private static final Set<String> STRING_LIKE_TYPES = new Set<String>{'STRING', 'ID', 'REFERENCE', 'PICKLIST', 'TEXTAREA', 'ADDRESS', 'PHONE', 'EMAIL', 'URL', ' CURRENCY', 'MULTIPICKLIST'};
 
     /* @method: GetSettings
      * @description:  Get the Org Domain URL & user's Timezone
@@ -65,6 +65,7 @@ public with sharing class AndeeWorkbenchController {
                 fw.Name = fieldResult.getName();
                 fw.Label = fieldResult.getLabel();
                 fw.Type = fieldResult.getType().name();
+                fw.ValueBoundByQuotes = (STRING_LIKE_TYPES.contains(fw.Type))?true:false;
                 fw.Filterable = fieldResult.isFilterable();
                 fw.Groupable = fieldResult.isGroupable();
                 fw.Createable = fieldResult.isCreateable();
@@ -726,6 +727,9 @@ public with sharing class AndeeWorkbenchController {
         
         @AuraEnabled
         public String Type;
+        
+        @AuraEnabled
+        public Boolean ValueBoundByQuotes;
         
         @AuraEnabled
         public Boolean Createable;
