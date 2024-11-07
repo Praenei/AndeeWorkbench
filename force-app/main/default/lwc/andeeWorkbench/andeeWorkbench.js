@@ -147,7 +147,7 @@ export default class AndeeWorkbench extends LightningElement {
     }
 
     // Function to get fields for a selected object
-    async getFields(){
+    async getFields(reGenerateQuery = true){
         console.log('starting getFields : ' + this.objectValue);
         getFieldsForObject({objectName : this.objectValue})
         .then(data => {
@@ -172,8 +172,10 @@ export default class AndeeWorkbench extends LightningElement {
 
             this.selectedFields = [];
 
-            this.rebuildQuery();
-
+            if (reGenerateQuery){
+                this.rebuildQuery();
+            } 
+            
             this.isLoading = false;
             this.error = undefined;
         })
@@ -622,7 +624,6 @@ export default class AndeeWorkbench extends LightningElement {
 
                 var whereFieldValue = whereFields.options[whereFields.selectedIndex].value;
                 console.log('after whereFieldValue ' + whereFieldValue + ' - ' + Date.now() + ' (elapsed ' + (Date.now() - startTime) + 'ms)');
-                
 
                 var whereOperValue = whereOper.options[whereOper.selectedIndex].value;
                 var whereOperValue2 = whereOperValue;
@@ -641,7 +642,7 @@ export default class AndeeWorkbench extends LightningElement {
                     if(this.template.querySelector('[data-id="QB_filter_value_'+i+'"]').value == 'null'){
                         this.whereClause += ' ' + this.template.querySelector('[data-id="QB_filter_value_'+i+'"]').value;
                     } else {
-                        if(this.fieldArrayLowercase[whereFieldValue.toLowerCase()].Type == 'BOOLEAN' || this.fieldArrayLowercase[whereFieldValue.toLowerCase()].Type == 'DATE' || this.fieldArrayLowercase[whereFieldValue.toLowerCase()].Type == 'DATETIME' || this.fieldArrayLowercase[whereFieldValue.toLowerCase()].Type == 'Double'){
+                        if(this.fieldArrayLowercase[whereFieldValue.toLowerCase()].ValueBoundByQuotes == false){
                             this.whereClause += ' ' + this.template.querySelector('[data-id="QB_filter_value_'+i+'"]').value;
                         } else {
                             if (whereOperValue == 'starts'){
@@ -719,8 +720,8 @@ export default class AndeeWorkbench extends LightningElement {
     }
 
 
-    resyncSoql(){
-        console.log('starting resyncSoql');
+    resyncSoqlFields(){
+        console.log('starting resyncSoqlFields');
 
         this.isLoading = true;
         
@@ -754,13 +755,20 @@ export default class AndeeWorkbench extends LightningElement {
         }
     }
 
-    resyncObject(parsedObjValueLowercase){
+    resyncSoqlObject(){
 
-        console.log('starting resyncObject: ' + parsedObjValueLowercase);
+        console.log('starting resyncSoqlObject');
+        this.soqlQuery = this.template.querySelector('[data-id="soql_query_textarea"]').value;
+        this.parsedSoql = this.parseSoql(this.soqlQuery);
+        const parsedObjValueLowercase = this.parsedSoql.objectName.toLowerCase();
+
+        console.log('parsedObjValueLowercase:' + parsedObjValueLowercase);
+
         var tempObjectOptions = [];
         for(let i=0; i<this.objectOptions.length; i++){
             
             if(this.objectOptions[i].value.toLowerCase() === parsedObjValueLowercase){
+                console.log('Object found in objectOptions');
                 tempObjectOptions = [...tempObjectOptions, {label: this.objectOptions[i].label, value: this.objectOptions[i].value, selected: true}];
                 this.objectValue = this.objectOptions[i].value;
             } else {
@@ -769,14 +777,16 @@ export default class AndeeWorkbench extends LightningElement {
         }
 
         // force rerender of the object select dropdown
-        this.objectOptions = tempObjectOptions;
-        this.objectOptions = [...this.objectOptions];
+        this.objectOptions = [];
+        this.objectOptions = [...tempObjectOptions];
 
         for(let i=0; i<this.objectOptions.length; i++){
             if(this.objectOptions[i].selected){
                 console.log('Selected object is ' + this.objectOptions[i].value);
             }
         }
+
+        this.getFields(false);
 
     }
 
