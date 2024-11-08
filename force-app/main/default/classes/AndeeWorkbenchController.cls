@@ -129,54 +129,21 @@ public with sharing class AndeeWorkbenchController {
 
         
         ResultWrapper result = new ResultWrapper();
-        list<RowWrapper> rows = new list<RowWrapper>();
 
         // Always perform a count().
-        // Only throw an error on count is specifically wanting a count().
-        // Done as some objects, e.g. TwoFactorMethodsInfo, do not allow counts so querying on them was causing an error.
-        integer count;
-        try {
-            count = SubmitQueryCount(objectApiName, whereClause, allRows);
-            result.TotalRowCountWithNoLimit = count;
-        } catch(Exception e){
-            if(fields.size() == 1 && fields[0].toLowerCase() == 'count()'){
-                throw e;
-            }
-        }
+        result.TotalRowCountWithNoLimit = SubmitCountQuery(objectApiName, whereClause, allRows);
 
-
-        // handle if count() is in the fields
-        if(fields.size() == 1 && fields[0].toLowerCase() == 'count()'){
-
-            FieldData fw = new FieldData();
-            fw.Name = 'count()';
-            fw.Value = String.valueOf(count);
-            fw.Linkable = false;
-
-
-            RowWrapper rw = new RowWrapper();
-            rw.RowId = 0;
-            rw.Fields = new List<FieldData>();
-            rw.Fields.add(fw);
-
-            rows.add(rw);
-            result.Rows = rows;
-            return result;
-        }
-
+        // Build the query string
         string query = constructQuery(objectApiName, fields, whereClause, sortOrder, limitCount, allRows, offset);
         
         // Execute the query
         List<SObject> queryResults = Database.query(query);
 
-        // Iterate through the results
-        integer rowId = 0;
-        for (SObject obj : queryResults) {
-            RowWrapper wrapper = new RowWrapper();
-            // convert rowId to string
+        result.Rows = queryResults;
 
-            wrapper.RowId = rowId++;
-            wrapper.Fields = new List<FieldData>();
+
+        for (SObject obj : queryResults) {
+            result.Fields = new List<FieldData>();
 
             for (String field : fields) {
                 FieldData fieldData = new FieldData();
@@ -199,13 +166,9 @@ public with sharing class AndeeWorkbenchController {
                             relatedObj = relatedObj.getSObject(relationshipParts[i]);
                         }
                     }
-
-                    fieldData.Value = FormatFieldValue(fieldValue, fieldType);
                 } else {
                     // Handle fields on the main object
-                    fieldType = GetFieldType(objectApiName, field);
-                    fieldData.Value = FormatFieldValue(obj.get(field), fieldType);
-                    
+                    fieldType = GetFieldType(objectApiName, field);                    
                 }
 
                 if(fieldType == 'REFERENCE' || field == 'Id'){
@@ -215,17 +178,38 @@ public with sharing class AndeeWorkbenchController {
                     fieldData.FieldType = fieldType;
                 }
 
-                wrapper.Fields.add(fieldData);
+                result.Fields.add(fieldData);
 
             }
-
-            rows.add(wrapper);
+            // Only get the field formats for the first row as applied in Javascript
+            break;
         }
-
-        result.Rows = rows;
 
         return result;
     }
+
+
+
+    /* @method: SubmitCountQuery
+     * @description:  Run a dynamic SOQL & return results
+     * @param : String objectApiName : API object name 
+     * @param : string whereClause : the SOQL where clause
+     * @param : boolean allRows : if to include deleted/archived rows or not
+     * @return : integer : the number of rows returned
+    */ 
+    @AuraEnabled
+    public static integer SubmitCountQuery(String objectApiName, string whereClause, boolean allRows) {
+
+        list<string> fields = new list<string>();
+        fields.add('count()');
+
+        string query = constructQuery(objectApiName, fields, whereClause, null, null, allRows, null);
+        
+        return Database.countQuery(query);
+    
+    }
+
+    
     
 
     /* @method: getFieldType
@@ -373,32 +357,6 @@ public with sharing class AndeeWorkbenchController {
         insert cv;
 
         return cv.Id;
-
-    }
-    
-    
-    /* @method: SubmitQueryCount
-     * @description: Submit a SOQL query that returns a count of the number of rows which would be returned
-     * @param : String objectApiName : API object name 
-     * @param : list<string> fields : list of field names which data should be retrieved for 
-     * @param : string whereClause : the SOQL where clause 
-     * @param : string sortOrder : the SOQL Order By clause 
-     * @param : string limitCount : the SOQL Limit  
-     * @param : boolean allRows : if to include deleted/archived rows or not  
-     * @return : integer : the count of the number of rows 
-    */
-    @AuraEnabled
-    public static Integer SubmitQueryCount(String objectApiName, string whereClause, boolean allRows) {
-
-        list<string> fields = new list<string>();
-        fields.add('count(Id)');
-
-        string query = constructQuery(objectApiName, fields, whereClause, null, null, allRows, null);
-        
-        // Execute the query
-        List<SObject> queryResults = Database.query(query);
-
-        return (Integer)queryResults[0].get('expr0');
 
     }
     
@@ -764,20 +722,15 @@ public with sharing class AndeeWorkbenchController {
     
     public class ResultWrapper {
         @AuraEnabled public Integer TotalRowCountWithNoLimit;
-        @AuraEnabled public List<RowWrapper> Rows;
-    }    
-    
-    public class RowWrapper {
-        @AuraEnabled public Integer RowId;
+        @AuraEnabled public List<sObject> Rows;
         @AuraEnabled public List<FieldData> Fields;
-    }
+    } 
 
     public class FieldData {
         @AuraEnabled public String Name;
-        @AuraEnabled public String Value;
         @AuraEnabled public Boolean Linkable;
         @AuraEnabled public String FieldType;
-    }
+    } 
     
     public class QuerySingleRowWrapper {
         @AuraEnabled public String ObjectApiName;

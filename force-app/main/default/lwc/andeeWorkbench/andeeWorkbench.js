@@ -4,6 +4,7 @@ import { LightningElement, wire, track } from 'lwc';
 import getAllObjects from '@salesforce/apex/AndeeWorkbenchController.GetAllObjects';
 import getFieldsForObject from '@salesforce/apex/AndeeWorkbenchController.GetFieldsForObject';
 import submitQuery from '@salesforce/apex/AndeeWorkbenchController.SubmitQuery';
+import submitCountQuery from '@salesforce/apex/AndeeWorkbenchController.SubmitCountQuery';
 import submitQueryTsv from '@salesforce/apex/AndeeWorkbenchController.SubmitQueryTsv';
 import submitQueryBatch from '@salesforce/apex/BatchAndeeWorkbench.SubmitQueryBatch';
 import getBatchJobStatus from '@salesforce/apex/BatchAndeeWorkbench.GetBatchJobStatus';
@@ -210,18 +211,15 @@ export default class AndeeWorkbench extends LightningElement {
 
         console.log(this.parsedSoql.fields.length + ' : ' + this.parsedSoql.fields[0].toLowerCase());
 
+        // If only a count() required        
         if(this.parsedSoql.fields.length == 1 && this.parsedSoql.fields[0].toLowerCase() == 'count()'){
 
             console.log('Performing count query');
 
             // If count is true, submit a count query
-            submitQuery({objectApiName : this.parsedSoql.objectName,
-                fields : this.parsedSoql.fields,
-                whereClause : this.parsedSoql.whereClauses, 
-                sortOrder : this.parsedSoql.orderByClauses, 
-                limitCount : this.parsedSoql.limitValue,
-                allRows : this.template.querySelector('[data-id="excludeDeleted"]').checked,
-                offset : ''})
+            submitCountQuery({objectApiName : this.parsedSoql.objectName,
+                whereClause : this.parsedSoql.whereClauses,
+                allRows : this.template.querySelector('[data-id="excludeDeleted"]').checked})
                 .then(data => {
                     // Process count query results
 
@@ -229,7 +227,8 @@ export default class AndeeWorkbench extends LightningElement {
                     this.queryResults = [];
                     this.totalRowCountWithNoLimit = undefined;
                     this.queryHeadings = [{name:'Count()'}];
-                    this.queryResults = data.Rows;
+
+                    this.queryResults = [{"Fields":[{"Name":"Count()","Value":data}]}];
 
                     // remove the query from the array
                     if(this.querySave.includes(this.soqlQuery)){
@@ -250,6 +249,9 @@ export default class AndeeWorkbench extends LightningElement {
                 console.error('error (submitQueryCount) => ', error);
                 this.isLoading = false;
             })
+
+
+        // Else normal query    
         } else {
 
             console.log('Performing regular query');
@@ -263,37 +265,43 @@ export default class AndeeWorkbench extends LightningElement {
                 allRows : this.template.querySelector('[data-id="excludeDeleted"]').checked,
                 offset : ''})
             .then(data => {
-                console.log(data);
 
                 // Process query results
                 this.queryHeadings = [];
                 this.queryResults = [];
                 var results = [];
+                var fields = [];
                 this.totalRowCountWithNoLimit = data.TotalRowCountWithNoLimit;
-                results = data.Rows;
+                fields = data.Fields;
                 var headings = [];
+                var fieldMap = {};
 
-                if(results.length>0){
-                    for (var i = 0; i < results[0].Fields.length; i++) {
-                        headings = [ ...headings, {name:results[0].Fields[i].Name, isPrimarySort:results[0].Fields[i].Name.toLowerCase()==this.primarySortField, isPrimarySortOrderAsc:(results[0].Fields[i].Name.toLowerCase()==this.primarySortField)?this.primarySortOrder=='asc':null} ];
+
+                if(fields.length>0){
+                    for (var i = 0; i < fields.length; i++) {
+                        headings = [ ...headings, {name:fields[i].Name, isPrimarySort:fields[i].Name.toLowerCase()==this.primarySortField, isPrimarySortOrderAsc:(fields[i].Name.toLowerCase()==this.primarySortField)?this.primarySortOrder=='asc':null} ];
+                        fieldMap[fields[i].Name] = fields[i];
                     }
                     this.queryHeadings = headings;
                 }
 
-                this.queryResults = data.Rows;
+                results = this.transformData(fields, data.Rows);
+
+                //console.log('results: ' + JSON.stringify(results));
+
+                this.queryResults = results;
 
                 // Process field linkability
                 for(var i=0; i<this.queryResults.length; i++){
                     for(var j=0; j<this.queryResults[i].Fields.length; j++){
                         if (this.fieldArrayLowercase[this.queryResults[i].Fields[j].Name.toLowerCase()]?.Linkable !== undefined) {
                             this.queryResults[i].Fields[j].Linkable = this.fieldArrayLowercase[this.queryResults[i].Fields[j].Name.toLowerCase()].Linkable;
-                            if (this.queryResults[i].Fields[j].Linkable && this.queryResults[i].Fields[j].Value !== undefined && this.queryResults[i].Fields[j].Value.length > 0) {
+                            if (this.queryResults[i].Fields[j].Linkable && this.queryResults[i].Fields[j].Value !== undefined && this.queryResults[i].Fields[j].Value !== null && this.queryResults[i].Fields[j].Value.length > 0) {
                                 this.queryResults[i].Fields[j].HRef = this.orgDomainUrl + '/' + this.queryResults[i].Fields[j].Value;
                             }
                         }
                     }
-                } 
-                
+                }                 
 
                 // remove the query from the array
                 if(this.querySave.includes(this.soqlQuery)){
@@ -316,6 +324,31 @@ export default class AndeeWorkbench extends LightningElement {
                 this.isLoading = false;
             })
         }
+    }
+
+    transformData(fields, results) {
+        return results.map(result => {
+            let data = [];
+            fields.forEach(field => {
+                let fieldParts = field.Name.toLowerCase().split('.');
+                let value = result;
+                for (let part of fieldParts) {
+                    value = value ? this.getValueIgnoreCase(value, part) : null;
+                }
+                data.push({ Name: field.Name, Value: value });                
+            });
+            return { Fields: data };
+        });
+    }
+    
+    getValueIgnoreCase(obj, key) {
+        let lowerCaseKey = key.toLowerCase();
+        for (let k in obj) {
+            if (obj.hasOwnProperty(k) && k.toLowerCase() === lowerCaseKey) {
+                return obj[k];
+            }
+        }
+        return null;
     }
 
     historyUp(){

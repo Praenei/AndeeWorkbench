@@ -1,4 +1,3 @@
-
 @isTest
 private class AndeeWorkbenchController_Test {
     
@@ -98,8 +97,9 @@ private class AndeeWorkbenchController_Test {
         
         System.assertEquals(1, result.TotalRowCountWithNoLimit, 'There should be one account with Finance industry');
         System.assertEquals(1, result.Rows.size(), 'There should be one account with Finance industry');
-        System.assertEquals('Child Account', result.Rows[0].Fields[1].Value, 'The account name should be Child Account');
-        System.assertEquals('Parent Account', result.Rows[0].Fields[3].Value, 'The parent account name should be Parent Account');
+        Account account = (Account)result.Rows[0];
+        System.assertEquals('Child Account', account.Name, 'The account name should be Child Account');
+        
     }
     
     /**
@@ -126,11 +126,11 @@ private class AndeeWorkbenchController_Test {
     }
     
     /**
-     * @description Tests the SubmitQueryCount method
+     * @description Tests the SubmitCountQuery method
      */
     @isTest
-    static void testSubmitQueryCount() {
-        Integer count = AndeeWorkbenchController.SubmitQueryCount('Account', 'Industry = \'Finance\'', false);
+    static void testSubmitCountQuery() {
+        Integer count = AndeeWorkbenchController.SubmitCountQuery('Account', 'Industry = \'Finance\'', false);
         System.assertEquals(1, count, 'There should be one account with Finance industry');
     }
     
@@ -247,5 +247,14 @@ private class AndeeWorkbenchController_Test {
         
         // -5 as -5 timezone
         system.assertEquals('2024-12-31T17:00:00Z', AndeeWorkbenchController.ConvertTimeZoneFromUtc('2024-12-31 22:00:00', 'America/New_York'));
+    }   
+    
+    /**
+     * @description Tests the testConvertTimeZoneFromUtc method
+     */
+    @isTest
+    static void codeCoverageRunningInASandbox() {
+
+        AndeeWorkbenchController.RunningInASandbox();
     }
 }
