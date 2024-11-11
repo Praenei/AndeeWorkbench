@@ -42,6 +42,7 @@ export default class AndeeWorkbench extends LightningElement {
     @track isBatchJobCompleted;
     @track selectedSingleRecordId;
     @track selectedSingleRecordObject;
+    @track displayQueryResults = false;
     @track rowData = [];
     @track totalRowCountWithNoLimit;
     @track isDisplaySingleId = false;
@@ -223,7 +224,7 @@ export default class AndeeWorkbench extends LightningElement {
                 .then(data => {
                     // Process count query results
 
-
+                    this.displayQueryResults = true;
                     this.queryResults = [];
                     this.totalRowCountWithNoLimit = undefined;
                     this.queryHeadings = [{name:'Count()'}];
@@ -267,6 +268,7 @@ export default class AndeeWorkbench extends LightningElement {
             .then(data => {
 
                 // Process query results
+                this.displayQueryResults = true;
                 this.queryHeadings = [];
                 this.queryResults = [];
                 var results = [];
@@ -276,32 +278,37 @@ export default class AndeeWorkbench extends LightningElement {
                 var headings = [];
                 var fieldMap = {};
 
+                // Only display data is it exists
+                if (fields != null){
 
-                if(fields.length>0){
-                    for (var i = 0; i < fields.length; i++) {
-                        headings = [ ...headings, {name:fields[i].Name, isPrimarySort:fields[i].Name.toLowerCase()==this.primarySortField, isPrimarySortOrderAsc:(fields[i].Name.toLowerCase()==this.primarySortField)?this.primarySortOrder=='asc':null} ];
-                        fieldMap[fields[i].Name] = fields[i];
+
+                    if(fields.length>0){
+                        for (var i = 0; i < fields.length; i++) {
+                            headings = [ ...headings, {name:fields[i].Name, isPrimarySort:fields[i].Name.toLowerCase()==this.primarySortField, isPrimarySortOrderAsc:(fields[i].Name.toLowerCase()==this.primarySortField)?this.primarySortOrder=='asc':null} ];
+                            fieldMap[fields[i].Name] = fields[i];
+                        }
+                        this.queryHeadings = headings;
                     }
-                    this.queryHeadings = headings;
-                }
 
-                results = this.transformData(fields, data.Rows);
+                    results = this.transformData(fields, data.Rows);
 
-                //console.log('results: ' + JSON.stringify(results));
+                    //console.log('results: ' + JSON.stringify(results));
 
-                this.queryResults = results;
+                    this.queryResults = results;
+                    // Process field linkability
+                    for(var i=0; i<this.queryResults.length; i++){
 
-                // Process field linkability
-                for(var i=0; i<this.queryResults.length; i++){
-                    for(var j=0; j<this.queryResults[i].Fields.length; j++){
-                        if (this.fieldArrayLowercase[this.queryResults[i].Fields[j].Name.toLowerCase()]?.Linkable !== undefined) {
-                            this.queryResults[i].Fields[j].Linkable = this.fieldArrayLowercase[this.queryResults[i].Fields[j].Name.toLowerCase()].Linkable;
-                            if (this.queryResults[i].Fields[j].Linkable && this.queryResults[i].Fields[j].Value !== undefined && this.queryResults[i].Fields[j].Value !== null && this.queryResults[i].Fields[j].Value.length > 0) {
-                                this.queryResults[i].Fields[j].HRef = this.orgDomainUrl + '/' + this.queryResults[i].Fields[j].Value;
+                        for(var j=0; j<this.queryResults[i].Fields.length; j++){
+
+                            if (this.fieldArrayLowercase[this.queryResults[i].Fields[j].Name.toLowerCase()]?.Linkable !== undefined) {
+                                this.queryResults[i].Fields[j].Linkable = this.fieldArrayLowercase[this.queryResults[i].Fields[j].Name.toLowerCase()].Linkable;
+                                if (this.queryResults[i].Fields[j].Linkable && this.queryResults[i].Fields[j].Value !== undefined && this.queryResults[i].Fields[j].Value !== null && this.queryResults[i].Fields[j].Value.length > 0) {
+                                    this.queryResults[i].Fields[j].HRef = this.orgDomainUrl + '/' + this.queryResults[i].Fields[j].Value;
+                                }
                             }
                         }
-                    }
-                }                 
+                    }  
+                }               
 
                 // remove the query from the array
                 if(this.querySave.includes(this.soqlQuery)){
@@ -382,6 +389,7 @@ export default class AndeeWorkbench extends LightningElement {
         console.log('starting submitTsvQuery');
         this.isLoading = true;
         this.jobStatus = null;
+        this.displayQueryResults = false;
 
         // Get the SOQL query from the textarea
         this.soqlQuery = this.template.querySelector('[data-id="soql_query_textarea"]').value;
@@ -428,6 +436,7 @@ export default class AndeeWorkbench extends LightningElement {
         this.queryHeadings = [];
         this.queryResults = [];
         this.totalRowCountWithNoLimit = undefined;
+        this.displayQueryResults = false;
 
         this.soqlQuery = this.template.querySelector('[data-id="soql_query_textarea"]').value;
 
@@ -1184,8 +1193,10 @@ export default class AndeeWorkbench extends LightningElement {
             this.queryHeadings = [];
             this.queryResults = [];
             var results = [];
+            var fields = [];
             this.totalRowCountWithNoLimit = data.TotalRowCountWithNoLimit;
-            results = data.Rows;
+            fields = data.Fields;
+            var fieldMap = {};
 
             // Need to reset the primarySortField & primarySortOrder as the query results may be in a different order
             // if the user has clicked on a heading.
@@ -1193,34 +1204,44 @@ export default class AndeeWorkbench extends LightningElement {
 
             var headings = [];
 
-            if(results.length>0){
-                for (var i = 0; i < results[0].Fields.length; i++) {
-                    headings = [ ...headings, {name:results[0].Fields[i].Name, isPrimarySort:results[0].Fields[i].Name.toLowerCase()==this.primarySortField, isPrimarySortOrderAsc:(results[0].Fields[i].Name.toLowerCase()==this.primarySortField)?this.primarySortOrder=='asc':null} ];
+            // Only display data is it exists
+            if (fields != null){
+
+                if(fields.length>0){
+                    for (var i = 0; i < fields.length; i++) {
+                        headings = [ ...headings, {name:fields[i].Name, isPrimarySort:fields[i].Name.toLowerCase()==this.primarySortField, isPrimarySortOrderAsc:(fields[i].Name.toLowerCase()==this.primarySortField)?this.primarySortOrder=='asc':null} ];
+                        fieldMap[fields[i].Name] = fields[i];
+                    }
+                    this.queryHeadings = headings;
                 }
-                this.queryHeadings = headings;
-            }
 
-            this.queryResults = data.Rows;
+                results = this.transformData(fields, data.Rows);
 
-            // Process field linkability
-            for(var i=0; i<this.queryResults.length; i++){
-                for(var j=0; j<this.queryResults[i].Fields.length; j++){
-                    if (this.fieldArrayLowercase[this.queryResults[i].Fields[j].Name.toLowerCase()]?.Linkable !== undefined) {
-                        this.queryResults[i].Fields[j].Linkable = this.fieldArrayLowercase[this.queryResults[i].Fields[j].Name.toLowerCase()].Linkable;
-                        if (this.queryResults[i].Fields[j].Linkable) {
-                            this.queryResults[i].Fields[j].HRef = this.orgDomainUrl + '/' + this.queryResults[i].Fields[j].Value;
+                //console.log('results: ' + JSON.stringify(results));
+
+                this.queryResults = results;
+                // Process field linkability
+                for(var i=0; i<this.queryResults.length; i++){
+
+                    for(var j=0; j<this.queryResults[i].Fields.length; j++){
+
+                        if (this.fieldArrayLowercase[this.queryResults[i].Fields[j].Name.toLowerCase()]?.Linkable !== undefined) {
+                            this.queryResults[i].Fields[j].Linkable = this.fieldArrayLowercase[this.queryResults[i].Fields[j].Name.toLowerCase()].Linkable;
+                            if (this.queryResults[i].Fields[j].Linkable && this.queryResults[i].Fields[j].Value !== undefined && this.queryResults[i].Fields[j].Value !== null && this.queryResults[i].Fields[j].Value.length > 0) {
+                                this.queryResults[i].Fields[j].HRef = this.orgDomainUrl + '/' + this.queryResults[i].Fields[j].Value;
+                            }
                         }
                     }
-                }
-            }             
+                }  
+            }              
 
             this.isLoading = false;
             this.error = undefined;
         
         })
         .catch(error => {
-            this.error = error.body.message;
             console.error('error (loadPageOfData) => ', error);
+            this.error = error.body.message;
             this.isLoading = false;
         })
 
