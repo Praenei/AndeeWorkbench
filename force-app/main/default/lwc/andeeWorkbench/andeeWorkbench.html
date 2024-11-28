@@ -10,6 +10,12 @@
                 </lightning-spinner>            
             </div>
         </template>
+
+        <template if:true={isQuotesGame}>                    
+            <c-andee-quotes onclosequotes={handleCloseQuotes}></c-andee-quotes>
+        </template>
+
+        <template if:false={isQuotesGame}>
         <br/>
         <div class="slds-media__body">
 
@@ -19,7 +25,7 @@
                         <div class="slds-media slds-no-space slds-grow">
                             <h2 class="slds-card__header-title">
                                 <span class="slds-truncate slds-m-right--xx-small" title="Workbench" onclick={zombieEasterEgg}>
-                                    Workbench 1.8
+                                    Workbench 1.9
                                 </span>
                             </h2>
                         </div>
@@ -261,14 +267,15 @@
                             <template if:true={error}>
                                 <tr>
                                     <td colspan="3">
-                                    <div data-id="errorDiv">
+                                    <div data-id="errorDiv" onclick={quotesEasterEgg}>
                                         <div data-id="errorDivInner" class="slds-notify slds-notify--alert slds-theme--error slds-theme--alert-texture" role="alert" >
                                         {error}
                                         </div>
                                     </div>
                                     </td>
                                 </tr>
-                            </template>
+                            </template>                            
+
                             <tr>
                                 <td colspan="3" style="padding-top: 5px; padding-bottom: 5px;" >
                                     <lightning-button
@@ -637,6 +644,7 @@
             </template>
 
         </div>
+    </template>
         
     </div>
     
