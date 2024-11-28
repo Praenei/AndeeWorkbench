@@ -24,7 +24,13 @@ A simplified version of Workbench built within Salesforce.  Handles simple queri
 7) Order results with clickable headings
 8) Bonus easter egg games
 
+<h5>Zombie:</h5>
+
 ![image](https://github.com/user-attachments/assets/f2c45f1e-c490-468c-9a04-332c0f753cf5)
+
+<h5>Quotes:</h5>
+
+![image](https://github.com/user-attachments/assets/c441e944-afd8-4af0-b7ca-9ec245d149ea)
 
 
 <b>Installation</b> 
