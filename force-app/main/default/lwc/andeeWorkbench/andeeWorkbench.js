@@ -17,6 +17,7 @@ import insertSingleEntryData from '@salesforce/apex/AndeeWorkbenchController.Ins
 import GetIsSandbox from '@salesforce/apex/AndeeWorkbenchController.RunningInASandbox';
 
 import andeeZombie from 'c/andeeZombie';
+import andeeQuotes from 'c/andeeQuotes';
 import areYouSure from 'c/areYouSure';
 
 export default class AndeeWorkbench extends LightningElement {
@@ -58,6 +59,8 @@ export default class AndeeWorkbench extends LightningElement {
 
     @track primarySortField = '';
     @track primarySortOrder = '';
+
+    @track isQuotesGame = false;
     
     allObjects = []; // contains an array of all the objects in the Salesforce instance (ApiName + Label)
 
@@ -151,6 +154,7 @@ export default class AndeeWorkbench extends LightningElement {
     // Function to get fields for a selected object
     async getFields(reGenerateQuery = true){
         console.log('starting getFields : ' + this.objectValue);
+        var idExists = false;
         getFieldsForObject({objectName : this.objectValue})
         .then(data => {
             var returnOpts = [];
@@ -160,7 +164,10 @@ export default class AndeeWorkbench extends LightningElement {
             allValues = data;
             for (var i = 0; i < allValues.length; i++) {
                 // Create options for field select dropdown
-                returnOpts = [ ...returnOpts, {label: allValues[i].Name, value: allValues[i].Name, selected: false, key:this.objectValue+'-'+allValues[i].Name} ];
+                if(allValues[i].Name=='Id'){
+                    idExists = true;
+                }
+                returnOpts = [ ...returnOpts, {label: allValues[i].Name, value: allValues[i].Name, selected: (allValues[i].Name=='Id')?true:false, key:this.objectValue+'-'+allValues[i].Name} ];
                 if(allValues[i].Filterable){
                     // Create options for where clause fields
                     whereOpts = [ ...whereOpts, {label: allValues[i].Name, value: allValues[i].Name, selected: false} ];
@@ -175,6 +182,25 @@ export default class AndeeWorkbench extends LightningElement {
             this.selectedFields = [];
 
             if (reGenerateQuery){
+                if(idExists){
+                    this.selectedFields = ['Id'];
+                }
+
+                // reset the order by & where clauses
+                this.sortOrder = '';
+                this.template.querySelector('[data-id="QB_orderby_field"]').value = '';
+                this.whereClause = '';
+
+                for (var i = 0; i < 99; i++) {
+                    var whereFields = this.template.querySelector('[data-id="QB_filter_field_'+i+'"]')
+                    if (whereFields) {
+                        whereFields.value = '';
+                    } else {
+                        break;
+                    }
+                }
+                this.limit = '500';
+
                 this.rebuildQuery();
             } 
             
@@ -657,7 +683,6 @@ export default class AndeeWorkbench extends LightningElement {
         // if it doesn't exist, break the loop
         
         for (var i = 0; i < 99; i++) {
-            console.log('loop ' + i + ' at ' + Date.now() + ' (elapsed ' + (Date.now() - startTime) + 'ms)');
             var whereFields = this.template.querySelector('[data-id="QB_filter_field_'+i+'"]')
             var whereOper = this.template.querySelector('[data-id="QB_filter_compOper_'+i+'"]')
             if (whereFields && whereOper) {
@@ -1381,6 +1406,20 @@ export default class AndeeWorkbench extends LightningElement {
         }).then((result) => {
             
         });
+    }
+
+    quotesEasterEgg(){  
+        console.log('starting quotesEasterEgg');
+        this.isQuotesGame = true;
+        const quotesComponent = this.template.querySelector('c-andee-quotes');
+        if (quotesComponent) {
+            quotesComponent.classList.remove('slds-hide');
+        }
+
+    }
+
+    handleCloseQuotes(event) {
+        this.isQuotesGame = !event.detail.isClosed;
     }
 
 
