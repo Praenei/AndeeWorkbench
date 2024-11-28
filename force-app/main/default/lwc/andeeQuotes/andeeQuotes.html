@@ -1,0 +1,21 @@
+<template>
+    <lightning-card>
+        <div class="slds-m-around_medium">
+            <lightning-button-icon icon-name="utility:close" alternative-text="Close" class="close-button" onclick={handleClose}></lightning-button-icon>
+            <p class="encrypted-text">{encryptedQuote}</p>
+            <template if:true={isGameWon}>
+                <div class="game-won-message">
+                    Congratulations! You've decrypted the quote in {timeDiff} ({swapCount} letter swaps).
+                </div>
+            </template>
+            <div class="chart-container">
+                <canvas lwc:dom="manual" class="chart"></canvas>
+            </div>
+            <div class="letter-buttons">
+                <template for:each={alphabet} for:item="letter">
+                    <lightning-button key={letter} label={letter} data-letter={letter} onclick={handleLetterClick}></lightning-button>
+                </template>
+            </div>
+        </div>
+    </lightning-card>
+</template>
