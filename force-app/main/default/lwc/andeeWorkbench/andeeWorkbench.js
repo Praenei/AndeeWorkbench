@@ -442,6 +442,8 @@ export default class AndeeWorkbench extends LightningElement {
             this.queryResults[0].RowId = 'dummy';
             this.queryResults[0].Fields = [];
             this.queryResults[0].Fields.push(downloadLink);
+
+            this.displayQueryResults = true;
         
             this.isLoading = false;
             this.error = undefined;
@@ -483,6 +485,7 @@ export default class AndeeWorkbench extends LightningElement {
             this.error = undefined;
             
             this.jobStatus = {Status : 'Submitted', JobItemsProcessed : '', TotalJobItems : ''};
+            this.isBatchJobCompleted = false;
             this.monitorJobProgress();
         
         })
@@ -583,7 +586,6 @@ export default class AndeeWorkbench extends LightningElement {
     monitorJobProgress(){
         const checkStatus = setInterval(() => {
             console.log('Checking job status');
-            this.isBatchJobCompleted = false;
             getBatchJobStatus({jobId : this.batchJobId})
             .then(result => {
                 console.log('Job status: ' + result);
