@@ -1,10 +1,11 @@
-
 public with sharing class BatchAndeeWorkbench implements Database.Batchable<sObject>, Database.Stateful {
 
     private string objectApiName;
     private String query;
     private list<string> fields;
-    private id contentVersionId;
+    private id contentDocumentId;
+    private String csvOutput = '';
+    private String csvHeader;
     private integer batchNumber = 0;
     private static map<string, string> fieldTypeMap = new map<string, string>();
 
@@ -22,18 +23,23 @@ public with sharing class BatchAndeeWorkbench implements Database.Batchable<sObj
         this.objectApiName = objectApiName;
         this.fields = fields;
 
+        csvHeader = String.join(fields, '\t') + '\n';
+
         ContentVersion cv = new ContentVersion();
         cv.Title = 'QueryResults ' + System.currentTimeMillis();
-        cv.VersionData = Blob.valueOf(String.join(fields, '\t') + '\n');
+        cv.VersionData = Blob.valueOf('Dummy');
         cv.PathOnClient = 'workBench/' + cv.Title + '.tsv';
         cv.isMajorVersion = false;
 
         insert cv;
-        this.contentVersionId = cv.Id;
 
-        // Delete any contentVersions which are older that 30 days & have a pathOnClient starting with 'workBench/'
+        ContentVersion cvTemp = [SELECT ContentDocumentId FROM ContentVersion WHERE id = :cv.Id LIMIT 1];
+
+        this.contentDocumentId = cvTemp.contentDocumentId;
+
+        // Delete any contentVersions which are older that 2 days & have a pathOnClient starting with 'workBench/'
         list<id> cdIds = new list<id>();
-        for(contentVersion c : [SELECT id, contentdocumentId FROM ContentVersion WHERE Title LIKE 'QueryResults %' AND createdDate < :Datetime.now().addDays(-30) AND PathOnClient LIKE 'workBench/%']){
+        for(contentVersion c : [SELECT id, contentdocumentId FROM ContentVersion WHERE Title LIKE 'QueryResults %' AND createdDate < :Datetime.now().addDays(-2) AND PathOnClient LIKE 'workBench/%']){
             cdIds.add(c.contentdocumentId);
         }
         delete [SELECT id FROM ContentDocument WHERE id IN :cdIds];
@@ -54,23 +60,20 @@ public with sharing class BatchAndeeWorkbench implements Database.Batchable<sObj
      * @param scope The list of sObjects to process in this batch
      */
     public void execute(Database.BatchableContext bc, List<sObject> scope) {
-        String fileRow = '';
-        string csvOutput = '';
-
+        system.debug('execute');
         for (SObject obj : scope) {
-            fileRow = '';
 
+
+            String fileRow = '';
             for (String field : fields) {
                 if (field.contains('.')) {
                     // Handle related object fields
                     List<String> relationshipParts = field.split('\\.');
                     SObject relatedObj = obj;
-                    string fieldName = '';
+                    String fieldName = '';
                     Object fieldValue = null;
-
                     for (Integer i = 0; i < relationshipParts.size(); i++) {
                         if (relatedObj == null) break;
-
                         if (i == relationshipParts.size() - 1) {
                             fieldValue = relatedObj.get(relationshipParts[i]);
                             fieldName = relationshipParts[i];
@@ -78,40 +81,66 @@ public with sharing class BatchAndeeWorkbench implements Database.Batchable<sObj
                             relatedObj = relatedObj.getSObject(relationshipParts[i]);
                         }
                     }
-
-                    if(fileRow != ''){
+                    if (fileRow != '') {
                         fileRow += '\t';
                     }
-                    string fieldType = '';
-                    try{
+                    String fieldType = '';
+                    try {
                         fieldType = GetFieldType(relatedObj.getSObjectType().getDescribe().getName(), fieldName);
-                    } catch (Exception e){
-                        fieldType = 'STRING';  // To handle things like Parent i.e. not an object
+                    } catch (Exception e) {
+                        fieldType = 'STRING'; // To handle things like Parent i.e. not an object
                     }
-                    fileRow += (fieldValue==null)?'':FormatFieldValue(fieldValue, fieldType);
+                    fileRow += (fieldValue == null) ? '' : FormatFieldValue(fieldValue, fieldType);
                 } else {
-                    if(fileRow != ''){
+                    if (fileRow != '') {
                         fileRow += '\t';
                     }
                     // Handle fields on the main object
-                    fileRow += (obj.get(field)==null)?'':FormatFieldValue(obj.get(field), GetFieldType(objectApiName, field));
+                    fileRow += (obj.get(field) == null) ? '' : FormatFieldValue(obj.get(field), GetFieldType(objectApiName, field));
                 }
             }
-            csvOutput += fileRow + '\n';
-        }
+            this.csvOutput += fileRow + '\n';
 
-        ContentVersion cv = [SELECT id, VersionData FROM ContentVersion WHERE id = :contentVersionId];
-        String existingData = cv.VersionData.toString();
-        cv.VersionData = Blob.valueOf(existingData + csvOutput);
-        update cv;
+            if (this.csvOutput.length() > 5000000) { // Adjust size limit as needed
+                saveContentVersion();
+            }
+
+
+        }
     }
+
+    private void saveContentVersion() {
+        system.debug('saveContentVersion');
+        if (this.batchNumber == 0){
+            system.debug('saveContentVersion: update');
+            contentVersion cv = [select id, VersionData from ContentVersion where ContentDocumentId = :this.contentDocumentId LIMIT 1];
+            cv.VersionData = Blob.valueOf(this.csvHeader + this.csvOutput);
+            update cv;
+        } else {
+            system.debug('saveContentVersion: insert');
+            ContentVersion cv = new ContentVersion();
+            cv.Title = 'QueryResults ' + System.currentTimeMillis();
+            cv.VersionData = Blob.valueOf(this.csvHeader + this.csvOutput);
+            cv.ContentDocumentId = this.contentDocumentId;
+            cv.PathOnClient = 'workBench/' + cv.Title + '.tsv';
+            cv.isMajorVersion = false;
+            insert cv;
+        }
+        this.batchNumber ++;
+        this.csvOutput = '';
+    }
+
 
     /**
      * @description Finish method for the batch process
      * @param bc The BatchableContext
      */
     public void finish(Database.BatchableContext bc) {
-        // Do something when the batch finishes
+        system.debug('finish');
+        system.debug('this.csvOutput.length(): ' + this.csvOutput.length());
+        if (this.csvOutput.length() > 0) { 
+            saveContentVersion();
+        }
     }
 
     /**
@@ -129,9 +158,9 @@ public with sharing class BatchAndeeWorkbench implements Database.Batchable<sObj
         BatchAndeeWorkbench job = new BatchAndeeWorkbench(objectApiName, fields, whereClause, sortOrder, limitCount, allRows);
         id jobId = Database.executeBatch(job, 200);
 
-        system.debug('Andee: ' + jobId + ' ' + job.contentVersionId);
+        system.debug('Andee: ' + jobId + ' ' + job.contentDocumentId);
 
-        return new BatchJobResult(jobId, job.contentVersionId);
+        return new BatchJobResult(jobId, job.contentDocumentId);
     }
 
     /**
@@ -229,6 +258,18 @@ public with sharing class BatchAndeeWorkbench implements Database.Batchable<sObj
             return String.valueOf(fieldValue);
         }
     }
+    
+    @AuraEnabled(cacheable=true)
+    public static list<string> GetDownloadUrls(id contentDocumentId){
+        list<string> urls = new list<string>();
+
+        for(ContentVersion cv : [SELECT Id, VersionDataUrl FROM ContentVersion WHERE ContentDocumentId = :contentDocumentId]){
+            urls.add(cv.VersionDataUrl);
+        }
+
+        return urls;
+
+    }
 
     /**
      * @description Inner class to represent the result of a batch job submission
@@ -238,16 +279,16 @@ public with sharing class BatchAndeeWorkbench implements Database.Batchable<sObj
         public Id jobId;
 
         @AuraEnabled
-        public Id contentVersionId;
+        public Id contentDocumentId;
 
         /**
          * @description Constructor for BatchJobResult
          * @param jobId The ID of the batch job
-         * @param contentVersionId The ID of the ContentVersion created for the job
+         * @param contentDocumentId The ID of the ContentVersion created for the job
          */
-        public BatchJobResult(Id jobId, Id contentVersionId) {
+        public BatchJobResult(Id jobId, Id contentDocumentId) {
             this.jobId = jobId;
-            this.contentVersionId = contentVersionId;
+            this.contentDocumentId = contentDocumentId;
         }
     }
 }
