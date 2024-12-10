@@ -1,11 +1,3 @@
-/**
- * (c) Invesco 2024, all rights reserved
- * @date 01-Jul-2024
- * @author Andee Weir
- * @description Implementation of Workbench test class
- * @modifications  
- * 01-Jul-2024 Andee Weir             CDSME-xxxxx : Initial implementation
- */
 @isTest
 private class BatchAndeeWorkbench_Test {
     
