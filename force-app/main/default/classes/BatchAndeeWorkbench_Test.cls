@@ -1,4 +1,11 @@
-
+/**
+ * (c) Invesco 2024, all rights reserved
+ * @date 01-Jul-2024
+ * @author Andee Weir
+ * @description Implementation of Workbench test class
+ * @modifications  
+ * 01-Jul-2024 Andee Weir             CDSME-xxxxx : Initial implementation
+ */
 @isTest
 private class BatchAndeeWorkbench_Test {
     
@@ -49,6 +56,8 @@ private class BatchAndeeWorkbench_Test {
         System.assertNotEquals(null, jobStatus, 'Job status should not be null');
         System.assertEquals(result.jobId, jobStatus.Id, 'Job ID should match');
         System.assertNotEquals(null, jobStatus.Status, 'Job status should not be null');
+        
+        list<string> downloadUrls = BatchAndeeWorkbench.GetDownloadUrls(result.contentDocumentId);
         // Hard to check as not reliably able to delay the job
         /*System.assertEquals('Completed', jobStatus.Status, 'Job should be completed');
         System.assertEquals(0, jobStatus.NumberOfErrors, 'There should be no errors');
