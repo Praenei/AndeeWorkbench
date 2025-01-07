@@ -301,6 +301,7 @@ public with sharing class AndeeWorkbenchController {
 
         String csvOutput = String.join(fields, '\t') + '\n';
         String fileRow = '';
+        boolean firstField = true;
 
         for (SObject obj : queryResults) {
             fileRow = '';
@@ -321,15 +322,19 @@ public with sharing class AndeeWorkbenchController {
                             relatedObj = relatedObj.getSObject(relationshipParts[i]);
                         }
                     }
-
-                    if(fileRow != ''){
+                    
+                    if (!firstField) {
                         fileRow += '\t';
+                    } else {
+                        firstField = false;
                     }
                     fileRow += (fieldValue==null)?'':String.valueOf(fieldValue);
                 } else {
 
-                    if(fileRow != ''){
+                    if (!firstField) {
                         fileRow += '\t';
+                    } else {
+                        firstField = false;
                     }
                     // Handle fields on the main object
 
