@@ -62,8 +62,7 @@ public with sharing class BatchAndeeWorkbench implements Database.Batchable<sObj
     public void execute(Database.BatchableContext bc, List<sObject> scope) {
         system.debug('execute');
         for (SObject obj : scope) {
-
-
+            boolean firstField = true;
             String fileRow = '';
             for (String field : fields) {
                 if (field.contains('.')) {
@@ -81,8 +80,10 @@ public with sharing class BatchAndeeWorkbench implements Database.Batchable<sObj
                             relatedObj = relatedObj.getSObject(relationshipParts[i]);
                         }
                     }
-                    if (fileRow != '') {
+                    if (!firstField) {
                         fileRow += '\t';
+                    } else {
+                        firstField = false;
                     }
                     String fieldType = '';
                     try {
@@ -91,9 +92,11 @@ public with sharing class BatchAndeeWorkbench implements Database.Batchable<sObj
                         fieldType = 'STRING'; // To handle things like Parent i.e. not an object
                     }
                     fileRow += (fieldValue == null) ? '' : FormatFieldValue(fieldValue, fieldType);
-                } else {
-                    if (fileRow != '') {
+                } else {                    
+                    if (!firstField) {
                         fileRow += '\t';
+                    } else {
+                        firstField = false;
                     }
                     // Handle fields on the main object
                     fileRow += (obj.get(field) == null) ? '' : FormatFieldValue(obj.get(field), GetFieldType(objectApiName, field));
