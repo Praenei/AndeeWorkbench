@@ -92,7 +92,7 @@ public with sharing class BatchAndeeWorkbench implements Database.Batchable<sObj
                         fieldType = 'STRING'; // To handle things like Parent i.e. not an object
                     }
                     fileRow += (fieldValue == null) ? '' : FormatFieldValue(fieldValue, fieldType);
-                } else {                    
+                } else {
                     if (!firstField) {
                         fileRow += '\t';
                     } else {
