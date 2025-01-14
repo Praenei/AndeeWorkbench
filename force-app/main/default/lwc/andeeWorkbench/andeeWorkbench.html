@@ -25,7 +25,7 @@
                         <div class="slds-media slds-no-space slds-grow">
                             <h2 class="slds-card__header-title">
                                 <span class="slds-truncate slds-m-right--xx-small" title="Workbench" onclick={zombieEasterEgg}>
-                                    Workbench 1.10
+                                    Workbench 1.12
                                 </span>
                             </h2>
                         </div>
@@ -345,7 +345,9 @@
                     <p>Items Processed: {jobStatus.JobItemsProcessed} / {jobStatus.TotalJobItems}</p>
                     
                     <template if:true={isBatchJobCompleted}>
-                        <p><a href={contentVersionUrl} target="_blank">Download</a></p>
+                        <template for:each={downloadUrls} for:item="url" for:index="index">
+                            <p key={url.index}><a href={url} target="_blank">Download</a></p>
+                        </template>
                     </template>
                 </template>
 
@@ -440,7 +442,15 @@
             <!-- Display single record for view or update -->
             <template if:true={isDisplaySingleId}>
                 <div class="slds-text-heading_small" style="padding: 10px;">
-                    Single Id Display : {selectedSingleRecordId} for Object : {selectedSingleRecordObject}
+                    Object : {selectedSingleRecordObject} <br/>
+                    <div class="link-preview-container">
+                        Id : {selectedSingleRecordId} 
+                        <template if:false={isUpdateView}>
+                            <div class="preview-icon-container" onclick={previewClick} data-id={selectedSingleRecordIdHref}>
+                                <lightning-icon icon-name='utility:preview' alternative-text='preview' size='xx-small' title='preview'></lightning-icon>
+                            </div>
+                        </template> 
+                    </div>
                 </div>
                 <template if:false={isUpdateView}>
 
