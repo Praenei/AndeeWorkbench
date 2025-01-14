@@ -34,7 +34,6 @@ public with sharing class AndeeWorkbenchController {
             ow.Label = f.getDescribe().getLabel();
             allObjects.add(ow); 
         }
-        //allObjects.sort();
         return allObjects;
 
     }
@@ -305,6 +304,7 @@ public with sharing class AndeeWorkbenchController {
 
         for (SObject obj : queryResults) {
             fileRow = '';
+            firstField = true;
 
             for (String field : fields) {
                 if (field.contains('.')) {
@@ -322,8 +322,8 @@ public with sharing class AndeeWorkbenchController {
                             relatedObj = relatedObj.getSObject(relationshipParts[i]);
                         }
                     }
-                    
-                    if (!firstField) {
+
+                    if(!firstField){
                         fileRow += '\t';
                     } else {
                         firstField = false;
@@ -331,7 +331,7 @@ public with sharing class AndeeWorkbenchController {
                     fileRow += (fieldValue==null)?'':String.valueOf(fieldValue);
                 } else {
 
-                    if (!firstField) {
+                    if(!firstField){
                         fileRow += '\t';
                     } else {
                         firstField = false;
@@ -490,8 +490,12 @@ public with sharing class AndeeWorkbenchController {
                 } else if(field.Type == 'DATE'){
                     obj.put(field.Name, Date.valueOf(field.Value));
                 } else if(field.Type == 'DATETIME'){
-                    string newDateTime = field.Value.replace('T', ' ').replace('Z', '');
-                    obj.put(field.Name, DateTime.valueOf(newDateTime));
+                    if(field.Value != ''){
+                        string newDateTime = field.Value.replace('T', ' ').replace('Z', '');
+                        obj.put(field.Name, DateTime.valueOf(newDateTime));
+                    } else {
+                        obj.put(field.Name, null);
+                    }
                 } else if(field.Type == 'DECIMAL'){
                     obj.put(field.Name, Decimal.valueOf(field.Value));
                 } else if(field.Type == 'CURRENCY'){
