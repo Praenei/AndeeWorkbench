@@ -15,6 +15,7 @@ import deleteEntry from '@salesforce/apex/AndeeWorkbenchController.DeleteEntry';
 import undeleteEntry from '@salesforce/apex/AndeeWorkbenchController.UndeleteEntry';
 import insertSingleEntryData from '@salesforce/apex/AndeeWorkbenchController.InsertSingleEntryData';
 import GetIsSandbox from '@salesforce/apex/AndeeWorkbenchController.RunningInASandbox';
+import getDownloadUrls from '@salesforce/apex/BatchAndeeWorkbench.GetDownloadUrls';
 
 import andeeZombie from 'c/andeeZombie';
 import andeeQuotes from 'c/andeeQuotes';
@@ -39,7 +40,7 @@ export default class AndeeWorkbench extends LightningElement {
 
     @track batchJobId;
     @track jobStatus;
-    @track contentVersionUrl;
+    @track contentDocumentId;
     @track isBatchJobCompleted;
     @track selectedSingleRecordId;
     @track selectedSingleRecordObject;
@@ -59,6 +60,8 @@ export default class AndeeWorkbench extends LightningElement {
 
     @track primarySortField = '';
     @track primarySortOrder = '';
+
+    @track downloadUrls;
 
     @track isQuotesGame = false;
     
@@ -93,7 +96,7 @@ export default class AndeeWorkbench extends LightningElement {
         // Get the organization's domain URL & the user's timezone
         GetSettings()
         .then(result => {
-            this.orgDomainUrl = result.OrgDomainUrl;
+            this.orgDomainUrl = result.OrgDomainUrl  + '/';
             this.usersTimezone = result.UsersTimezone
 
             console.log('running GetIsSandbox');
@@ -329,7 +332,7 @@ export default class AndeeWorkbench extends LightningElement {
                             if (this.fieldArrayLowercase[this.queryResults[i].Fields[j].Name.toLowerCase()]?.Linkable !== undefined) {
                                 this.queryResults[i].Fields[j].Linkable = this.fieldArrayLowercase[this.queryResults[i].Fields[j].Name.toLowerCase()].Linkable;
                                 if (this.queryResults[i].Fields[j].Linkable && this.queryResults[i].Fields[j].Value !== undefined && this.queryResults[i].Fields[j].Value !== null && this.queryResults[i].Fields[j].Value.length > 0) {
-                                    this.queryResults[i].Fields[j].HRef = this.orgDomainUrl + '/' + this.queryResults[i].Fields[j].Value;
+                                    this.queryResults[i].Fields[j].HRef = this.orgDomainUrl + this.queryResults[i].Fields[j].Value;
                                 }
                             }
                         }
@@ -480,7 +483,7 @@ export default class AndeeWorkbench extends LightningElement {
             console.log('Result from batch job :');
             console.dir(result);
             this.batchJobId = result.jobId;
-            this.contentVersionUrl = this.orgDomainUrl + '/sfc/servlet.shepherd/version/download/'+result.contentVersionId+'?operationContext=S1';;      
+            this.contentDocumentId = result.contentDocumentId;     
             this.isLoading = false;
             this.error = undefined;
             
@@ -594,8 +597,15 @@ export default class AndeeWorkbench extends LightningElement {
                 if(this.jobStatus.Status == 'Completed'){
                     this.isBatchJobCompleted = true;
                     clearInterval(checkStatus);
-                    this.isLoading = false;
-                    this.error = undefined;
+
+                    getDownloadUrls({contentDocumentId : this.contentDocumentId})
+                    .then(result => {
+                        this.downloadUrls = [];
+                        this.downloadUrls = result;
+
+                        this.isLoading = false;
+                        this.error = undefined;
+                    })
                 }
             })
             .catch(error => {
@@ -1255,7 +1265,7 @@ export default class AndeeWorkbench extends LightningElement {
                         if (this.fieldArrayLowercase[this.queryResults[i].Fields[j].Name.toLowerCase()]?.Linkable !== undefined) {
                             this.queryResults[i].Fields[j].Linkable = this.fieldArrayLowercase[this.queryResults[i].Fields[j].Name.toLowerCase()].Linkable;
                             if (this.queryResults[i].Fields[j].Linkable && this.queryResults[i].Fields[j].Value !== undefined && this.queryResults[i].Fields[j].Value !== null && this.queryResults[i].Fields[j].Value.length > 0) {
-                                this.queryResults[i].Fields[j].HRef = this.orgDomainUrl + '/' + this.queryResults[i].Fields[j].Value;
+                                this.queryResults[i].Fields[j].HRef = this.orgDomainUrl + this.queryResults[i].Fields[j].Value;
                             }
                         }
                     }
@@ -1498,6 +1508,10 @@ export default class AndeeWorkbench extends LightningElement {
         } else {
             return 'slds-card-wrapper background-prod';
         }
+    }
+
+    get selectedSingleRecordIdHref() {
+        return this.orgDomainUrl + this.selectedSingleRecordId;
     }
 
     /*get isPrimarySortField() {
