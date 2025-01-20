@@ -672,6 +672,44 @@ public with sharing class AndeeWorkbenchController {
         return localTime.yearGmt() + '-' + ('0' + localTime.monthGmt()).right(2) + '-' + ('0' + localTime.dayGmt()).right(2) + 'T' + ('0' + localTime.hourGmt()).right(2) + ':' + ('0' + localTime.minuteGmt()).right(2) + ':' + ('0' + localTime.secondGmt()).right(2) + 'Z';
     }
 
+    
+    
+    
+    /* @method: GetUsersFavouriteQueries
+     * @description: Get favourite queries for supplied user
+    */
+    @AuraEnabled
+    public static list<AndeeWorkbench_Favourite__c> GetUsersFavouriteQueries(){
+        list<AndeeWorkbench_Favourite__c> favouriteQueries = new list<AndeeWorkbench_Favourite__c>();
+        for(AndeeWorkbench_Favourite__c favQuery : [SELECT Id, Query__c FROM AndeeWorkbench_Favourite__c WHERE ownerId = :UserInfo.getuserid() order by createdDate desc]){
+            favouriteQueries.add(favQuery);
+        }
+        return favouriteQueries;
+
+    }  
+
+
+    /* @method: AddQueryToFavourites
+     * @description: Add a query to the user's favourite queries
+     * @param : string query : The query to add
+    */
+    @AuraEnabled
+    public static void AddQueryToFavourites(string query){
+        AndeeWorkbench_Favourite__c favQuery = new AndeeWorkbench_Favourite__c(Query__c = query);
+        insert favQuery;
+    }  
+
+
+    /* @method: DeleteFavourite
+     * @description: Delete a query from the user's favourite queries
+     * @param : id queryId - the id of the query to be removed
+    */
+    @AuraEnabled
+    public static list<AndeeWorkbench_Favourite__c> DeleteFavourite(id queryId){
+        delete [select id from AndeeWorkbench_Favourite__c where id = :queryId];
+        return GetUsersFavouriteQueries();
+    }  
+
  
 
     public class ObjectWrapper{
