@@ -6,8 +6,6 @@ import getFieldsForObject from '@salesforce/apex/AndeeWorkbenchController.GetFie
 import submitQuery from '@salesforce/apex/AndeeWorkbenchController.SubmitQuery';
 import submitCountQuery from '@salesforce/apex/AndeeWorkbenchController.SubmitCountQuery';
 import submitQueryTsv from '@salesforce/apex/AndeeWorkbenchController.SubmitQueryTsv';
-import submitQueryBatch from '@salesforce/apex/BatchAndeeWorkbench.SubmitQueryBatch';
-import getBatchJobStatus from '@salesforce/apex/BatchAndeeWorkbench.GetBatchJobStatus';
 import GetSettings from '@salesforce/apex/AndeeWorkbenchController.GetSettings';
 import getSingleEntryData from '@salesforce/apex/AndeeWorkbenchController.GetSingleEntryData';
 import updateSingleEntryData from '@salesforce/apex/AndeeWorkbenchController.UpdateSingleEntryData';
@@ -15,7 +13,13 @@ import deleteEntry from '@salesforce/apex/AndeeWorkbenchController.DeleteEntry';
 import undeleteEntry from '@salesforce/apex/AndeeWorkbenchController.UndeleteEntry';
 import insertSingleEntryData from '@salesforce/apex/AndeeWorkbenchController.InsertSingleEntryData';
 import GetIsSandbox from '@salesforce/apex/AndeeWorkbenchController.RunningInASandbox';
+import addQueryToFavourites from '@salesforce/apex/AndeeWorkbenchController.AddQueryToFavourites';
+import deleteFavourite from '@salesforce/apex/AndeeWorkbenchController.DeleteFavourite';
+import getUsersFavouriteQueries from '@salesforce/apex/AndeeWorkbenchController.GetUsersFavouriteQueries';
+
 import getDownloadUrls from '@salesforce/apex/BatchAndeeWorkbench.GetDownloadUrls';
+import submitQueryBatch from '@salesforce/apex/BatchAndeeWorkbench.SubmitQueryBatch';
+import getBatchJobStatus from '@salesforce/apex/BatchAndeeWorkbench.GetBatchJobStatus';
 
 import andeeZombie from 'c/andeeZombie';
 import andeeQuotes from 'c/andeeQuotes';
@@ -48,6 +52,7 @@ export default class AndeeWorkbench extends LightningElement {
     @track rowData = [];
     @track totalRowCountWithNoLimit;
     @track isDisplaySingleId = false;
+    @track isDisplayFavs = false;
     @track isUpdateView = false;
     @track isInsertView = false;
     @track isDeleted = false;
@@ -57,6 +62,7 @@ export default class AndeeWorkbench extends LightningElement {
     @track convertDateTime;
     @track isShowFieldLabels = false;
     @track isShowObjectLabels = false;
+    @track usersFavouriteQueries = [];
 
     @track primarySortField = '';
     @track primarySortOrder = '';
@@ -64,6 +70,8 @@ export default class AndeeWorkbench extends LightningElement {
     @track downloadUrls;
 
     @track isQuotesGame = false;
+
+
     
     allObjects = []; // contains an array of all the objects in the Salesforce instance (ApiName + Label)
 
@@ -410,6 +418,83 @@ export default class AndeeWorkbench extends LightningElement {
 
             this.template.querySelector('[data-id="soql_query_textarea"]').value = this.querySave[this.querySavePosition];
         }
+    }
+
+    addFavourite(event){
+        console.log('starting addFavourite:' + this.template.querySelector('[data-id="soql_query_textarea"]').value);
+        var currentQuery = this.template.querySelector('[data-id="soql_query_textarea"]').value;
+        if(currentQuery.length > 0){
+            this.isLoading = true;
+            addQueryToFavourites({query : currentQuery})
+            .then(data => {
+                console.log('Query added to favourites');
+                this.isLoading = false;
+                this.error = undefined;
+            })
+            .catch(error => {
+                console.error('error (addFavourite) => ', error);
+                this.error = error.body.message;
+                this.isLoading = false;
+            })
+        }
+    }
+
+    displayFavs(){
+        console.log('starting displayFavs');
+        this.isDisplayFavs = true;
+        this.isLoading = true;
+        getUsersFavouriteQueries()
+            .then(data => {
+                console.log(data);
+                this.usersFavouriteQueries = [];
+                var temp = [];
+
+                for (var i = 0; i < data.length; i++) {
+                    temp = [ ...temp, {index: i, value: data[i].Query__c, id:data[i].Id} ];
+                }
+
+                this.usersFavouriteQueries = temp;
+
+                this.isLoading = false;
+                this.error = undefined;
+            })
+            .catch(error => {
+                console.error('error (displayFavs) => ', error);
+                this.error = error.body.message;
+                this.isLoading = false;
+            })
+    }
+
+    chooseFav(event){
+        console.log('starting chooseFav : ' + event.currentTarget.dataset.id);
+        this.soqlQuery = this.usersFavouriteQueries[parseInt(event.currentTarget.dataset.id)].value;
+        this.parsedSoql = this.parseSoql(this.soqlQuery);
+        this.isDisplayFavs = false;
+    }
+
+    deleteFav(event){
+        console.log('starting deleteFav : ' + event.currentTarget.dataset.id);
+        this.isLoading = true;
+
+        deleteFavourite({queryId : event.currentTarget.dataset.id})
+            .then(data => {
+
+                this.isLoading = false;
+                this.usersFavouriteQueries = [];
+                var temp = [];
+
+                for (var i = 0; i < data.length; i++) {
+                    temp = [ ...temp, {index: i, value: data[i].Query__c, id:data[i].Id} ];
+                }
+
+                this.usersFavouriteQueries = temp;
+                this.error = undefined;
+            })
+            .catch(error => {
+                console.error('error (deleteFav) => ', error);
+                this.error = error.body.message;
+                this.isLoading = false;
+            })
     }
 
 
@@ -781,6 +866,7 @@ export default class AndeeWorkbench extends LightningElement {
 
         
         this.error = undefined;
+        this.isDisplayFavs = false;
 
 
         // remove the last element from the chainOfSingleRowIds array
@@ -1436,7 +1522,7 @@ export default class AndeeWorkbench extends LightningElement {
 
 
     get isQueryMode() {
-        return !this.isDisplaySingleId && !this.isInsertView;
+        return !this.isDisplaySingleId && !this.isInsertView && !this.isDisplayFavs;
     }
 
     get queryMainDivClass() {
