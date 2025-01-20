@@ -214,7 +214,34 @@ private class AndeeWorkbenchController_Test {
         Account newAcc = [SELECT Id, Name, Industry FROM Account WHERE Id = :newId];
         System.assertEquals('New Account', newAcc.Name);
         System.assertEquals('Healthcare', newAcc.Industry);
-    }    
+    }   
+
+    
+    
+    /**
+     * @description Tests all the Favourites methods
+     */
+    @isTest
+    static void testFavourities() {
+
+        string query1 = 'select id from contact';
+        string query2 = 'select id from account';
+        AndeeWorkbenchController.AddQueryToFavourites(query1);
+
+        List<AndeeWorkbench_Favourite__c> favs = [select id, query__c from AndeeWorkbench_Favourite__c];
+        system.assertEquals(1, favs.size());
+        system.assertEquals(query1, favs[0].query__c);
+
+        AndeeWorkbenchController.AddQueryToFavourites(query2);
+        favs = [select id, query__c from AndeeWorkbench_Favourite__c order by createdDate];
+        system.assertEquals(2, favs.size());
+        system.assertEquals(query2, favs[1].query__c);
+
+        favs = AndeeWorkbenchController.DeleteFavourite(favs[0].Id);
+        system.assertEquals(1, favs.size());
+        system.assertEquals(query2, favs[0].query__c);
+
+    } 
     
     /**
      * @description Tests the DeleteEntry method

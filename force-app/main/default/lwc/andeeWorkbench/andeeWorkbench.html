@@ -25,7 +25,7 @@
                         <div class="slds-media slds-no-space slds-grow">
                             <h2 class="slds-card__header-title">
                                 <span class="slds-truncate slds-m-right--xx-small" title="Workbench" onclick={zombieEasterEgg}>
-                                    Workbench 1.12
+                                    Workbench 1.13
                                 </span>
                             </h2>
                         </div>
@@ -259,7 +259,8 @@
                                     <div style="display: flex; flex-direction: column; justify-content: center; height: 100%;">
                                         {querySaveDisplayPosition}/{querySaveTotal}<br/>
                                         <lightning-button-icon icon-name='utility:arrowup' alternative-text='forward' size='x-small' title='forward' disabled={historyUpDisabled} onclick={historyUp} style="margin-bottom: 5px;"></lightning-button-icon>
-                                        <lightning-button-icon icon-name='utility:arrowdown' alternative-text='back' size='x-small' title='back' disabled={historyDownDisabled} onclick={historyDown}></lightning-button-icon>
+                                        <lightning-button-icon icon-name='utility:arrowdown' alternative-text='back' size='x-small' title='back' disabled={historyDownDisabled} onclick={historyDown} style="margin-bottom: 5px;"></lightning-button-icon>
+                                        <lightning-button-icon icon-name='utility:heart' alternative-text='heart' variant='error' size='x-small' title='add to favs' onclick={addFavourite}></lightning-button-icon>
                                     </div>
                                 </td>
                             </tr>                            
@@ -299,6 +300,14 @@
                                         label="Batch TSV"
                                         class="slds-m-top_small"
                                         onclick={submitQueryBatch}
+                                        style="margin-right: 10px;"
+                                    ></lightning-button>
+                                    
+                                    <lightning-button
+                                        type="submit"
+                                        label="Favourites"
+                                        class="slds-m-top_small"
+                                        onclick={displayFavs}
                                         style="margin-right: 10px;"
                                     ></lightning-button>
 
@@ -435,6 +444,31 @@
                 </template>
             
 
+
+            </template>
+
+            <template if:true={isDisplayFavs}>
+
+                <table class="dataTable" style="margin-top:20px; margin-bottom:20px">
+                <template for:each={usersFavouriteQueries} for:item="record">
+                    <tr key={record.id}>
+                        <td>
+                            <lightning-icon icon-name='utility:delete' data-id={record.id} alternative-text='delete' variant='error' size='x-small' title='delete favourite' onclick={deleteFav}>></lightning-icon>
+                        </td>
+                        <td>
+                            <a key={record.index} data-id={record.index} onclick={chooseFav}>{record.value}</a><br key={record.index}/>
+                        </td>
+                    </tr>
+                </template>
+                </table>
+
+                <lightning-button
+                    type="submit"
+                    label="Back"
+                    class="slds-m-top_small"
+                    onclick={goBack}
+                    style="margin-top: 10px; margin-right: 10px;"
+                ></lightning-button>
 
             </template>
 
