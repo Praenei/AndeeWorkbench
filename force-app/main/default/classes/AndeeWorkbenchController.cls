@@ -681,7 +681,12 @@ public with sharing class AndeeWorkbenchController {
     @AuraEnabled
     public static list<AndeeWorkbench_Favourite__c> GetUsersFavouriteQueries(){
         list<AndeeWorkbench_Favourite__c> favouriteQueries = new list<AndeeWorkbench_Favourite__c>();
-        for(AndeeWorkbench_Favourite__c favQuery : [SELECT Id, Query__c FROM AndeeWorkbench_Favourite__c WHERE ownerId = :UserInfo.getuserid() order by createdDate desc]){
+        Integer i = 1; // fix for any existing records with null order (created before Order feature added)
+        for(AndeeWorkbench_Favourite__c favQuery : [SELECT Id, Query__c, Order__c FROM AndeeWorkbench_Favourite__c WHERE ownerId = :UserInfo.getuserid() order by order__c nulls last, createdDate desc]){
+            if (favQuery.Order__c == null){
+                favQuery.Order__c = i;
+            }
+            i++;
             favouriteQueries.add(favQuery);
         }
         return favouriteQueries;
@@ -695,7 +700,18 @@ public with sharing class AndeeWorkbenchController {
     */
     @AuraEnabled
     public static void AddQueryToFavourites(string query){
-        AndeeWorkbench_Favourite__c favQuery = new AndeeWorkbench_Favourite__c(Query__c = query);
+
+        Decimal currentLastOrder = 0;
+        AndeeWorkbench_Favourite__c currentLast = null;
+        try{
+            currentLast = [select id, order__c from AndeeWorkbench_Favourite__c order by order__c desc limit 1];
+        } catch(Exception e){
+        }
+        if(currentLast != null){
+            currentLastOrder = currentLast.order__c;
+        }
+
+        AndeeWorkbench_Favourite__c favQuery = new AndeeWorkbench_Favourite__c(Query__c = query, Order__c = currentLastOrder + 1);
         insert favQuery;
     }  
 
@@ -708,6 +724,14 @@ public with sharing class AndeeWorkbenchController {
     public static list<AndeeWorkbench_Favourite__c> DeleteFavourite(id queryId){
         delete [select id from AndeeWorkbench_Favourite__c where id = :queryId];
         return GetUsersFavouriteQueries();
+    }  
+
+    /* @method: ReorderFavouriteQueries
+     * @description: Reorder a user's favourite queries
+    */
+    @AuraEnabled
+    public static void ReorderFavouriteQueries(list <AndeeWorkbench_Favourite__c> favouriteQueries){
+        update favouriteQueries;
     }  
 
  
