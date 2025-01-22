@@ -16,6 +16,7 @@ import GetIsSandbox from '@salesforce/apex/AndeeWorkbenchController.RunningInASa
 import addQueryToFavourites from '@salesforce/apex/AndeeWorkbenchController.AddQueryToFavourites';
 import deleteFavourite from '@salesforce/apex/AndeeWorkbenchController.DeleteFavourite';
 import getUsersFavouriteQueries from '@salesforce/apex/AndeeWorkbenchController.GetUsersFavouriteQueries';
+import reorderFavouriteQueries from '@salesforce/apex/AndeeWorkbenchController.ReorderFavouriteQueries';
 
 import getDownloadUrls from '@salesforce/apex/BatchAndeeWorkbench.GetDownloadUrls';
 import submitQueryBatch from '@salesforce/apex/BatchAndeeWorkbench.SubmitQueryBatch';
@@ -450,7 +451,7 @@ export default class AndeeWorkbench extends LightningElement {
                 var temp = [];
 
                 for (var i = 0; i < data.length; i++) {
-                    temp = [ ...temp, {index: i, value: data[i].Query__c, id:data[i].Id} ];
+                    temp = [ ...temp, {index: i, value: data[i].Query__c, id:data[i].Id, order:data[i].Order__c} ];
                 }
 
                 this.usersFavouriteQueries = temp;
@@ -484,7 +485,7 @@ export default class AndeeWorkbench extends LightningElement {
                 var temp = [];
 
                 for (var i = 0; i < data.length; i++) {
-                    temp = [ ...temp, {index: i, value: data[i].Query__c, id:data[i].Id} ];
+                    temp = [ ...temp, {index: i, value: data[i].Query__c, id:data[i].Id, order:data[i].Order__c} ];
                 }
 
                 this.usersFavouriteQueries = temp;
@@ -1517,7 +1518,67 @@ export default class AndeeWorkbench extends LightningElement {
     }
 
     handleCloseQuotes(event) {
+        console.log('starting handleCloseQuotes');
         this.isQuotesGame = !event.detail.isClosed;
+    }
+
+
+    handleFavDragStart(event) {
+        console.log('starting handleFavDragStart');
+        event.dataTransfer.setData('text/plain', event.target.dataset.id);
+    }
+
+    handleFavDragOver(event) {
+        event.preventDefault();
+    }
+
+    handleFavDrop(event) {
+        console.log('starting handleFavDrop');
+        event.preventDefault();
+        const draggedItemId = event.dataTransfer.getData('text/plain');
+        const droppedItemId = event.target.dataset.id;
+
+        if (draggedItemId !== droppedItemId) {
+            this.reorderFavItems(draggedItemId, droppedItemId);
+        }
+    }
+
+    reorderFavItems(draggedItemId, droppedItemId) {
+        console.log('starting reorderFavItems');
+        const draggedIndex = this.usersFavouriteQueries.findIndex(item => item.index == draggedItemId);
+        const droppedIndex = this.usersFavouriteQueries.findIndex(item => item.index == droppedItemId);
+
+        const [draggedItem] = this.usersFavouriteQueries.splice(draggedIndex, 1);
+
+        this.usersFavouriteQueries.splice(droppedIndex, 0, draggedItem);
+
+        var tempFavQueries = [];
+        for(let i=0; i<this.usersFavouriteQueries.length; i++){
+            if(i+1 != this.usersFavouriteQueries[i].order){
+                tempFavQueries = [...tempFavQueries, {Id: this.usersFavouriteQueries[i].id, Query__c: this.usersFavouriteQueries[i].value, Order__c: i+1}];
+                this.usersFavouriteQueries[i].order = i+1;
+            }
+        }
+
+        console.log(tempFavQueries);
+
+        if(tempFavQueries.length > 0){
+            this.isLoading = true;
+            reorderFavouriteQueries({favouriteQueries : tempFavQueries})
+            .then(data => {
+                console.log('Favourites reordered');
+                this.isLoading = false;
+                this.error = undefined;
+            })
+            .catch(error => {
+                console.error('error (reorderFavItems) => ', error);
+                this.error = error.body.message;
+                this.isLoading = false;
+            })
+        }
+
+
+
     }
 
 

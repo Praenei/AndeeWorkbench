@@ -25,7 +25,7 @@
                         <div class="slds-media slds-no-space slds-grow">
                             <h2 class="slds-card__header-title">
                                 <span class="slds-truncate slds-m-right--xx-small" title="Workbench" onclick={zombieEasterEgg}>
-                                    Workbench 1.13
+                                    Workbench 1.14
                                 </span>
                             </h2>
                         </div>
@@ -260,7 +260,7 @@
                                         {querySaveDisplayPosition}/{querySaveTotal}<br/>
                                         <lightning-button-icon icon-name='utility:arrowup' alternative-text='forward' size='x-small' title='forward' disabled={historyUpDisabled} onclick={historyUp} style="margin-bottom: 5px;"></lightning-button-icon>
                                         <lightning-button-icon icon-name='utility:arrowdown' alternative-text='back' size='x-small' title='back' disabled={historyDownDisabled} onclick={historyDown} style="margin-bottom: 5px;"></lightning-button-icon>
-                                        <lightning-button-icon icon-name='utility:heart' alternative-text='heart' variant='error' size='x-small' title='add to favs' onclick={addFavourite}></lightning-button-icon>
+                                        <lightning-icon style="padding-left:2px;" icon-name='utility:heart' alternative-text='favourite' variant='error' size='x-small' title='Add to favourites' onclick={addFavourite}></lightning-icon>
                                     </div>
                                 </td>
                             </tr>                            
@@ -449,18 +449,23 @@
 
             <template if:true={isDisplayFavs}>
 
-                <table class="dataTable" style="margin-top:20px; margin-bottom:20px">
-                <template for:each={usersFavouriteQueries} for:item="record">
-                    <tr key={record.id}>
-                        <td>
-                            <lightning-icon icon-name='utility:delete' data-id={record.id} alternative-text='delete' variant='error' size='x-small' title='delete favourite' onclick={deleteFav}>></lightning-icon>
-                        </td>
-                        <td>
-                            <a key={record.index} data-id={record.index} onclick={chooseFav}>{record.value}</a><br key={record.index}/>
-                        </td>
-                    </tr>
-                </template>
-                </table>
+                <div class="fav-columns">
+                    <template for:each={usersFavouriteQueries} for:item="favItem">
+                        <div key={favItem.index} class="fav-card" draggable="true" data-id={favItem.index}
+                            ondragstart={handleFavDragStart} ondragenter={handleFavDragEnter}
+                            ondragover={handleFavDragOver} ondragleave={handleFavDragLeave}
+                            ondrop={handleFavDrop} ondragend={handleFavDragEnd}>
+                            <table data-id={favItem.index}>
+                                <tr data-id={favItem.index}>
+                                    <td data-id={favItem.index} style="width:20px"><lightning-icon icon-name='utility:drag_and_drop' alternative-text='Drag and drop' size='large' title='drag_and_drop'></lightning-icon></td>
+                                    <td data-id={favItem.index} style="width:15px; padding-right:5px;"><lightning-icon icon-name='utility:play' alternative-text='Select SOQL' variant='success' size='medium' title='play' data-id={favItem.index} onclick={chooseFav}></lightning-icon></td>
+                                    <td data-id={favItem.index} style="width:15px; padding-right:5px;"><lightning-icon icon-name='utility:delete' data-id={favItem.id} alternative-text='Delete' variant='error' size='x-small' title='delete favourite' onclick={deleteFav}></lightning-icon></td>
+                                    <td data-id={favItem.index}>{favItem.value}</td>
+                                </tr>   
+                            </table>
+                        </div>
+                    </template>
+                </div>
 
                 <lightning-button
                     type="submit"

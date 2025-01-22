@@ -125,3 +125,16 @@ table.scrollable thead {
   background-color: rgba(255, 255, 255, 0.5);
   z-index: 9999;
 }
+
+.fav-columns {
+  display: flex;
+  flex-direction: column;
+}
+
+.fav-card {
+  padding: 10px;
+  margin: 5px;
+  background-color: #f4f4f4;
+  border: 1px solid #ccc;
+  cursor: grab;
+}
