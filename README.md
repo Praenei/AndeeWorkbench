@@ -22,7 +22,8 @@ A simplified version of Workbench built within Salesforce.  Handles simple queri
 
 6) View records in Salesforce (preview icon next to id)
 7) Order results with clickable headings
-8) Bonus easter egg games
+9) Ability to save favourite queries for later re-use.
+10) Bonus easter egg games
 
 <h5>Zombie:</h5>
 
@@ -36,14 +37,15 @@ A simplified version of Workbench built within Salesforce.  Handles simple queri
 <b>Installation</b> 
 
 Order if not deploying all at once via Ant etc.
-1) Apex classes (AndeeWorkbenchController, AndeeWorkbenchController_Test, BatchAndeeWorkbench & BatchAndeeWorkbench_Test
-2) All Static Resources
-3) LWC - areYouSure
-4) LWC - andeeZombie
-5) LWC - disableBackButton
-6) LWC - andeeQuotes
-7) LWC - andeeWorkbench
-8) Aura - AndeeWorkbenchWrapper
+1) Objects/fields/layouts (AndeeWorkbench_Favourite__c)
+2) Apex classes (AndeeWorkbenchController, AndeeWorkbenchController_Test, BatchAndeeWorkbench & BatchAndeeWorkbench_Test
+3) All Static Resources
+4) LWC - areYouSure
+5) LWC - andeeZombie
+6) LWC - disableBackButton
+7) LWC - andeeQuotes
+8) LWC - andeeWorkbench
+9) Aura - AndeeWorkbenchWrapper
 
 Easiest way is to download the metadata to your VSC folder & then just deploy from there.
 
