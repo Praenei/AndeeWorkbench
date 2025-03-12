@@ -1,0 +1,30 @@
+<template>
+
+    <lightning-card title="Execute Anonymous Apex">
+
+        <template if:true={isLoading}>
+            <div class="slds-spinner_container slds-is-fixed">            
+                <lightning-spinner alternative-text="Loading" variant="brand" size="large">
+                </lightning-spinner>            
+            </div>
+        </template>
+           
+        <div class="slds-m-around_medium">
+            <lightning-button-icon icon-name="utility:close" alternative-text="Close" class="close-button" onclick={handleClose}></lightning-button-icon>
+            <lightning-textarea label="Apex Code" class="input-text-area" value={apexCode} onchange={handleApexCodeChange}></lightning-textarea>
+            
+            <template if:true={result}>
+                <div data-id="errorDivInner" class="slds-notify slds-notify--alert slds-theme--error slds-theme--alert-texture" role="alert" >
+                    {result}
+                </div>
+            </template>
+
+            <lightning-button label="Execute" onclick={executeApex}></lightning-button>
+            <template if:true={debugLog}>
+                <lightning-textarea label="System Debug" class="input-text-area" value={debugLog} readonly="true"></lightning-textarea>
+            </template>
+        </div>
+
+    </lightning-card>
+
+</template>
