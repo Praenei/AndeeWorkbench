@@ -12,7 +12,6 @@ import updateSingleEntryData from '@salesforce/apex/AndeeWorkbenchController.Upd
 import deleteEntry from '@salesforce/apex/AndeeWorkbenchController.DeleteEntry';
 import undeleteEntry from '@salesforce/apex/AndeeWorkbenchController.UndeleteEntry';
 import insertSingleEntryData from '@salesforce/apex/AndeeWorkbenchController.InsertSingleEntryData';
-import GetIsSandbox from '@salesforce/apex/AndeeWorkbenchController.RunningInASandbox';
 import addQueryToFavourites from '@salesforce/apex/AndeeWorkbenchController.AddQueryToFavourites';
 import deleteFavourite from '@salesforce/apex/AndeeWorkbenchController.DeleteFavourite';
 import getUsersFavouriteQueries from '@salesforce/apex/AndeeWorkbenchController.GetUsersFavouriteQueries';
@@ -64,6 +63,7 @@ export default class AndeeWorkbench extends LightningElement {
     @track isShowFieldLabels = false;
     @track isShowObjectLabels = false;
     @track usersFavouriteQueries = [];
+    @track isSystemAdmin = false;
 
     @track primarySortField = '';
     @track primarySortOrder = '';
@@ -71,6 +71,8 @@ export default class AndeeWorkbench extends LightningElement {
     @track downloadUrls;
 
     @track isQuotesGame = false;
+
+    @track isExecAnon = false;
 
 
     
@@ -85,7 +87,11 @@ export default class AndeeWorkbench extends LightningElement {
     parsedSoql = {}; // contains the different parts of the SOQL query e.g. fields, objectName, whereClauses, orderByClauses, limitValue
 
     orgDomainUrl = "";
+    orgId = "";
+    usersId = "";
     usersTimezone = "";
+    canLoginAs = false;
+    activeUsers = [];
 
     chainOfSingleRowIds = []; // Used to control where the user goes after hitting the back button e.g. previous single row data or query
 
@@ -106,23 +112,17 @@ export default class AndeeWorkbench extends LightningElement {
         GetSettings()
         .then(result => {
             this.orgDomainUrl = result.OrgDomainUrl  + '/';
-            this.usersTimezone = result.UsersTimezone
+            this.orgId = result.OrgId;
+            this.usersId = result.UsersId;
+            this.usersTimezone = result.UsersTimezone;
+            this.isSystemAdmin = result.IsSystemAdmin;
+            this.canLoginAs = result.CanLoginAs;
 
-            console.log('running GetIsSandbox');
-            GetIsSandbox()
-            .then(result => {
-                this.isSandbox = result;
-                console.log('isSandbox: ' + this.isSandbox);
-            })
-            .catch(error => {
-                window.console.log('error (connectedCallback.GetIsSandbox) =====> '+JSON.stringify(error));
-                if(error) {
-                    this.error = error.body.message;
-                    window.console.log('@@@@ ERROR '+ error);
-                }
-            })
-
-
+            for(var i=0; i<result.ActiveUsers.length; i++){
+                // create a map of id from the active users to the user's name
+                this.activeUsers[result.ActiveUsers[i].Id] = result.ActiveUsers[i].Name;
+            }
+            this.isSandbox = result.IsSandbox;
         })
         .catch(error => {
             window.console.log('error (connectedCallback) =====> '+JSON.stringify(error));
@@ -333,6 +333,7 @@ export default class AndeeWorkbench extends LightningElement {
                     //console.log('results: ' + JSON.stringify(results));
 
                     this.queryResults = results;
+                    const setupUrl = this.orgDomainUrl.replace(/\.com\/$/, '-setup.com/');
                     // Process field linkability
                     for(var i=0; i<this.queryResults.length; i++){
 
@@ -342,6 +343,13 @@ export default class AndeeWorkbench extends LightningElement {
                                 this.queryResults[i].Fields[j].Linkable = this.fieldArrayLowercase[this.queryResults[i].Fields[j].Name.toLowerCase()].Linkable;
                                 if (this.queryResults[i].Fields[j].Linkable && this.queryResults[i].Fields[j].Value !== undefined && this.queryResults[i].Fields[j].Value !== null && this.queryResults[i].Fields[j].Value.length > 0) {
                                     this.queryResults[i].Fields[j].HRef = this.orgDomainUrl + this.queryResults[i].Fields[j].Value;
+                                    // Check if the user can perform Login As & is the id being processed is an active user
+                                    if(this.canLoginAs && this.activeUsers[this.queryResults[i].Fields[j].Value] && this.usersId != this.queryResults[i].Fields[j].Value){
+                                        this.queryResults[i].Fields[j].IsActiveUserId = true;
+                                        this.queryResults[i].Fields[j].LoginAsTitle = 'Login as ' + this.activeUsers[this.queryResults[i].Fields[j].Value];
+                                        this.queryResults[i].Fields[j].UserName = this.activeUsers[this.queryResults[i].Fields[j].Value];
+                                        this.queryResults[i].Fields[j].LoginAsUrl = setupUrl + 'servlet/servlet.su?oid=' + this.orgId.substring(0,15) + '&suorgadminid=' + this.queryResults[i].Fields[j].Value.substring(0, 15) + '&retURL=%2F' + this.queryResults[i].Fields[j].Value + '%3Fnoredirect%3D1%26isUserEntityOverride%3D1%26retURL%3D%252Fsetup%252Fhome%26appLayout%3Dsetup%26tour%3D%26isdtp%3Dp1%26sfdcIFrameOrigin%3Dhttps%253A%252F%252F' + setupUrl.substring(8, setupUrl.length - 1) + '%26sfdcIFrameHost%3Dweb%26nonce%3Dd49a6dfcca803aea44118a3bb621da4893fdb78e0bdee7fd0e5537afb66a600f%26ltn_app_id%3D%26clc%3D1&targetURL=%2Fhome%2Fhome.jsp';
+                                    }
                                 }
                             }
                         }
@@ -496,6 +504,29 @@ export default class AndeeWorkbench extends LightningElement {
                 this.error = error.body.message;
                 this.isLoading = false;
             })
+    }
+
+
+
+    loginAsClick(event) {
+        console.log('starting loginAsClick');
+        const url = event.currentTarget.dataset.id;
+
+        areYouSure.open ({
+            label: 'Are You Sure',
+            description: 'login as',
+            size: 'small',
+            message: 'If you continue, you will be logged in as ' + event.currentTarget.dataset.username
+        })
+        .then(result => {  
+            if((result)){          
+                window.open(url, '_blank');
+            }
+        })
+        .catch(error => {
+            console.error('error (are you sure/login as) => ', error); // error handling
+        });
+        
     }
 
 
@@ -1579,6 +1610,36 @@ export default class AndeeWorkbench extends LightningElement {
 
 
 
+    }
+
+    openObjectFieldSetup(){
+        // open in a new browser tab the object field setup page
+        console.log('starting openObjectFieldSetup');
+        window.open(this.orgDomainUrl + '/lightning/setup/ObjectManager/' + this.objectValue + '/FieldsAndRelationships/view', '_blank');
+    }
+
+    execAnon(){
+        console.log('starting execAnon');
+        this.isExecAnon = true;
+        const execAnonComponent = this.template.querySelector('c-andee-execute-anon');
+        if (execAnonComponent) {
+            execAnonComponent.classList.remove('slds-hide');
+        }
+
+    }
+
+    handleCloseExecAnon(event) {
+        console.log('starting handleCloseExecAnon : ' + event.detail.isClosed);
+        this.isExecAnon = !event.detail.isClosed;
+    }
+
+    get showWorkbench(){
+        console.log(this.isQuotesGame + ' ' + this.isExecAnon);
+        return !(this.isQuotesGame || this.isExecAnon);
+    }
+
+    get openObjectFieldSetupLabel(){
+        return this.objectValue ? 'Open ' + this.objectValue + ' Field Setup': '';
     }
 
 
