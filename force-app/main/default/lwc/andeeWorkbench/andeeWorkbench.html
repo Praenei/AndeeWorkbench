@@ -15,7 +15,11 @@
             <c-andee-quotes onclosequotes={handleCloseQuotes}></c-andee-quotes>
         </template>
 
-        <template if:false={isQuotesGame}>
+        <template if:true={isExecAnon}>                    
+            <c-andee-execute-anon oncloseexecanon={handleCloseExecAnon}></c-andee-execute-anon>
+        </template>
+
+        <template if:true={showWorkbench}>
         <br/>
         <div class="slds-media__body">
 
@@ -25,7 +29,7 @@
                         <div class="slds-media slds-no-space slds-grow">
                             <h2 class="slds-card__header-title">
                                 <span class="slds-truncate slds-m-right--xx-small" title="Workbench" onclick={zombieEasterEgg}>
-                                    Workbench 1.14
+                                    Workbench 1.17
                                 </span>
                             </h2>
                         </div>
@@ -311,6 +315,19 @@
                                         style="margin-right: 10px;"
                                     ></lightning-button>
 
+                                    
+                                    
+                                    <template if:true={isSystemAdmin}>
+                                    
+                                        <lightning-button
+                                            type="submit"
+                                            label="Execute Anonymous"
+                                            class="slds-m-top_small"
+                                            onclick={execAnon}
+                                            style="margin-right: 10px;"
+                                        ></lightning-button>
+                                    </template>
+
                                     <template if:true={objectValue}>
                                     
                                         <lightning-button
@@ -334,6 +351,14 @@
                                             label={insertButtonLabel}
                                             class="slds-m-top_small"
                                             onclick={displayNewRowForInsert}
+                                            style="margin-right: 10px;"
+                                        ></lightning-button>
+
+                                        <lightning-button
+                                            type="submit"
+                                            label={openObjectFieldSetupLabel}
+                                            class="slds-m-top_small"
+                                            onclick={openObjectFieldSetup}
                                             style="margin-right: 10px;"
                                         ></lightning-button>
                                     </template>
@@ -394,10 +419,15 @@
                                                 <template if:true={field.Linkable}>
                                                     <template if:false={field.IsDownloadLink}>
                                                         <div class="link-preview-container">
-                                                            <a data-id={field.Value} onclick={displaySingleRow}>{field.Value}</a>
+                                                            <a data-id={field.Value} onclick={displaySingleRow} title={field.Title}>{field.Value}</a>
                                                             <template if:true={field.HRef}>
                                                                 <div key={field.Value} class="preview-icon-container" onclick={previewClick} data-id={field.HRef}>
                                                                     <lightning-icon icon-name='utility:preview' alternative-text='preview' size='xx-small' title='preview'></lightning-icon>
+                                                                </div>
+                                                            </template>
+                                                            <template if:true={field.IsActiveUserId}>
+                                                                <div key={field.Value} class="user-icon-container" onclick={loginAsClick} data-id={field.LoginAsUrl} data-username={field.UserName}>
+                                                                    <lightning-icon icon-name='utility:user' alternative-text='Login As' size='xx-small' title={field.LoginAsTitle}></lightning-icon>
                                                                 </div>
                                                             </template>
                                                         </div>
