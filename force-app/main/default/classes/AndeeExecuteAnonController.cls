@@ -1,11 +1,3 @@
-/**
-(c) Invesco 2025, all rights reserved
-@date 01-Feb-2025      
-@author Andee Weir
-@description Allow Execute Anonymous Apex from a Lightning Component
-@modifications  
-01-Feb-2024 Andee Weir             CDSME-xxxxx : Initial implementation
-*/
 public class AndeeExecuteAnonController {
 
     public static final string REDIRECT_URI = 'https://login.salesforce.com/services/oauth2/callback';
