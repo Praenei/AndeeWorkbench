@@ -12,8 +12,20 @@ public with sharing class AndeeWorkbenchController {
     @AuraEnabled(cacheable=true)
     public static SettingsWrapper GetSettings(){
         SettingsWrapper settings = new SettingsWrapper();
-        settings.OrgDomainUrl = System.url.getOrgDomainUrl().toExternalForm();
+        settings.OrgDomainUrl = System.url.getOrgDomainUrl().toExternalForm();        
+        settings.OrgId = UserInfo.getOrganizationId();
+        settings.UsersId = UserInfo.getUserId();
         settings.UsersTimezone = UserInfo.getTimeZone().getID();
+        settings.IsSystemAdmin = UserInfo.getProfileId() == '00e58000000ZVeTAAW';
+        settings.CanLoginAs = CanLoginAs();
+        settings.ActiveUsers = new list<User>();
+        
+        for(user activeUser : [select id, name from user where isActive = true order by name]){
+            settings.ActiveUsers.add(activeUser);
+        }
+
+        settings.IsSandbox = [SELECT Id, IsSandbox FROM Organization LIMIT 1].IsSandbox;
+
         return settings;
     }
     
@@ -485,29 +497,30 @@ public with sharing class AndeeWorkbenchController {
                     hasFieldValueChanged = true;
                 }
 
-                if(field.Type == 'BOOLEAN'){
-                    obj.put(field.Name, field.Value == 'true');
-                } else if(field.Type == 'DATE'){
-                    obj.put(field.Name, Date.valueOf(field.Value));
-                } else if(field.Type == 'DATETIME'){
-                    if(field.Value != ''){
+                if(field.Value == ''){
+                    obj.put(field.Name, null);
+                } else {
+                    
+                    if(field.Type == 'BOOLEAN'){
+                        obj.put(field.Name, field.Value == 'true');
+                    } else if(field.Type == 'DATE'){
+                        obj.put(field.Name, Date.valueOf(field.Value));
+                    } else if(field.Type == 'DATETIME'){
                         string newDateTime = field.Value.replace('T', ' ').replace('Z', '');
                         obj.put(field.Name, DateTime.valueOf(newDateTime));
+                    } else if(field.Type == 'DECIMAL'){
+                        obj.put(field.Name, Decimal.valueOf(field.Value));
+                    } else if(field.Type == 'CURRENCY'){
+                        obj.put(field.Name, Decimal.valueOf(field.Value));
+                    } else if(field.Type == 'DOUBLE'){
+                        obj.put(field.Name, Double.valueOf(field.Value));
+                    } else if(field.Type == 'INTEGER'){
+                        obj.put(field.Name, Integer.valueOf(field.Value));
+                    } else if(field.Type == 'PERCENT'){
+                        obj.put(field.Name, Decimal.valueOf(field.Value));
                     } else {
-                        obj.put(field.Name, null);
+                        obj.put(field.Name, String.valueOf(field.Value));
                     }
-                } else if(field.Type == 'DECIMAL'){
-                    obj.put(field.Name, Decimal.valueOf(field.Value));
-                } else if(field.Type == 'CURRENCY'){
-                    obj.put(field.Name, Decimal.valueOf(field.Value));
-                } else if(field.Type == 'DOUBLE'){
-                    obj.put(field.Name, Double.valueOf(field.Value));
-                } else if(field.Type == 'INTEGER'){
-                    obj.put(field.Name, Integer.valueOf(field.Value));
-                } else if(field.Type == 'PERCENT'){
-                    obj.put(field.Name, Decimal.valueOf(field.Value));
-                } else {
-                    obj.put(field.Name, String.valueOf(field.Value));
                 }
             }
         }
@@ -593,18 +606,7 @@ public with sharing class AndeeWorkbenchController {
 
         undelete obj;
 
-    }  
-    
-    
-    
-     /* @method: RunningInASandbox
-     * @description:  Determines if running in a sandbox
-     * @return : Boolean : true if sandbox, false if not
-    */   
-    @AuraEnabled(cacheable=true)
-    public static Boolean RunningInASandbox() {
-        return [SELECT Id, IsSandbox FROM Organization LIMIT 1].IsSandbox;
-    }
+    } 
     
     
     /* @method: ConvertTimezone
@@ -732,7 +734,28 @@ public with sharing class AndeeWorkbenchController {
     @AuraEnabled
     public static void ReorderFavouriteQueries(list <AndeeWorkbench_Favourite__c> favouriteQueries){
         update favouriteQueries;
-    }  
+    } 
+
+
+    public static Boolean CanLoginAs() {
+        // Check if the current user's profile has the "Manage Users" permission
+        Boolean hasProfilePermission = [SELECT PermissionsManageUsers FROM Profile WHERE Id = :UserInfo.getProfileId()].PermissionsManageUsers;
+
+        // Check if any of the user's permission sets have the "Manage Users" permission
+        List<PermissionSetAssignment> psaList = [SELECT PermissionSet.PermissionsManageUsers 
+                                                 FROM PermissionSetAssignment 
+                                                 WHERE AssigneeId = :UserInfo.getUserId()];
+        Boolean hasPermissionSetPermission = false;
+        for (PermissionSetAssignment psa : psaList) {
+            if (psa.PermissionSet.PermissionsManageUsers) {
+                hasPermissionSetPermission = true;
+                break;
+            }
+        }
+
+        // Return true if either the profile or any permission set has the "Manage Users" permission
+        return hasProfilePermission || hasPermissionSetPermission;
+    }
 
  
 
@@ -801,6 +824,7 @@ public with sharing class AndeeWorkbenchController {
         @AuraEnabled public String Name;
         @AuraEnabled public Boolean Linkable;
         @AuraEnabled public String FieldType;
+        @AuraEnabled public Boolean IsUserId;
     } 
     
     public class QuerySingleRowWrapper {
@@ -810,7 +834,13 @@ public with sharing class AndeeWorkbenchController {
 
     public class SettingsWrapper {
         @AuraEnabled public String OrgDomainUrl;
+        @AuraEnabled public String OrgId;
+        @AuraEnabled public String UsersId;
         @AuraEnabled public String UsersTimezone;
+        @AuraEnabled public Boolean IsSystemAdmin;
+        @AuraEnabled public Boolean CanLoginAs;
+        @AuraEnabled public list<User> ActiveUsers;
+        @AuraEnabled public Boolean IsSandbox;
     }
 
 
