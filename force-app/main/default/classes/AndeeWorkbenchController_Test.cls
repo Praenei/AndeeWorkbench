@@ -274,14 +274,5 @@ private class AndeeWorkbenchController_Test {
         
         // -5 as -5 timezone
         system.assertEquals('2024-12-31T17:00:00Z', AndeeWorkbenchController.ConvertTimeZoneFromUtc('2024-12-31 22:00:00', 'America/New_York'));
-    }   
-    
-    /**
-     * @description Tests the testConvertTimeZoneFromUtc method
-     */
-    @isTest
-    static void codeCoverageRunningInASandbox() {
-
-        AndeeWorkbenchController.RunningInASandbox();
-    }
+    } 
 }
