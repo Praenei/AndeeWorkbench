@@ -30,6 +30,7 @@ export default class AndeeWorkbench extends LightningElement {
     // Track variables for component state
     @track isLoading = true;
     @track error;
+    @track skeletonRows = [];
     
     @track objectValue = "";
     @track objectOptions = [];
@@ -74,6 +75,13 @@ export default class AndeeWorkbench extends LightningElement {
 
     @track isExecAnon = false;
 
+    @track savedObjectValue = "";
+    @track savedSelectedFields = [];
+    @track savedFilterValues = [];
+    @track savedSortField = "";
+    @track savedSortOrder = "";
+    @track savedLimit = "";
+
 
     
     allObjects = []; // contains an array of all the objects in the Salesforce instance (ApiName + Label)
@@ -106,6 +114,11 @@ export default class AndeeWorkbench extends LightningElement {
     // Initialization function when component is loaded
     connectedCallback() {
         console.log('starting connectedCallback');
+
+        // Generate skeleton rows
+        this.skeletonRows = Array.from({ length: 5 }).map((_, index) => {
+            return { id: `skeleton-row-${index}` };
+        });
 
         this.convertDateTime = new Date().toISOString().slice(0, 19).replace('T', ' ');
         // Get the organization's domain URL & the user's timezone
@@ -248,12 +261,8 @@ export default class AndeeWorkbench extends LightningElement {
 
         this.parsedSoql = this.parseSoql(this.soqlQuery);
 
-        console.log(this.parsedSoql.fields.length + ' : ' + this.parsedSoql.fields[0].toLowerCase());
-
         // If only a count() required        
         if(this.parsedSoql.fields.length == 1 && this.parsedSoql.fields[0].toLowerCase() == 'count()'){
-
-            console.log('Performing count query');
 
             // If count is true, submit a count query
             submitCountQuery({objectApiName : this.parsedSoql.objectName,
@@ -293,8 +302,6 @@ export default class AndeeWorkbench extends LightningElement {
         // Else normal query    
         } else {
 
-            console.log('Performing regular query');
-
             // Submit a regular SOQL query
             submitQuery({objectApiName : this.parsedSoql.objectName,
                 fields : this.parsedSoql.fields,
@@ -329,8 +336,6 @@ export default class AndeeWorkbench extends LightningElement {
                     }
 
                     results = this.transformData(fields, data.Rows);
-
-                    //console.log('results: ' + JSON.stringify(results));
 
                     this.queryResults = results;
                     const setupUrl = this.orgDomainUrl.replace(/\.com\/$/, '-setup.com/');
@@ -886,6 +891,34 @@ export default class AndeeWorkbench extends LightningElement {
     displaySingleRow(event){
         console.log('starting displaySingleRow');
         this.isLoading = true;
+
+        if(!this.savedObjectValue){
+
+            // Save the current state before showing single record
+            this.savedSoqlValue = this.soqlQuery;
+            this.savedObjectValue = this.objectValue;
+            this.savedSelectedFields = [...this.selectedFields];
+            this.savedSortField = this.template.querySelector('[data-id="QB_orderby_field"]').value;
+            this.savedSortOrder = this.template.querySelector('[data-id="QB_orderby_sort"]').value;
+            this.savedLimit = this.limit;
+            
+            // Save filter values
+            this.savedFilterValues = [];
+            for (let i = 0; i < 4; i++) { // Assuming 4 filter rows
+                const filterField = this.template.querySelector(`[data-id="QB_filter_field_${i}"]`);
+                const filterOper = this.template.querySelector(`[data-id="QB_filter_compOper_${i}"]`);
+                const filterValue = this.template.querySelector(`[data-id="QB_filter_value_${i}"]`);
+                
+                if (filterField && filterOper && filterValue) {
+                    this.savedFilterValues.push({
+                        field: filterField.value,
+                        operator: filterOper.value,
+                        value: filterValue.value
+                    });
+                }
+            }
+        }
+
         this.isDisplaySingleId = true;
         this.selectedSingleRecordId = event.target.dataset.id;
         this.chainOfSingleRowIds.push(this.selectedSingleRecordId);
@@ -913,84 +946,138 @@ export default class AndeeWorkbench extends LightningElement {
             // Gone back through all the ones displayed so return to query view
             this.isDisplaySingleId = false;
             this.isInsertView = false;
+
+            this.jumpToTop();
+
+            // Restore saved state after returning to query view
+            if (this.savedObjectValue) {
+                this.restoreSavedSelections();
+            }
         }
     }
 
+    // Method to restore saved selections
+    restoreSavedSelections() {
 
-    resyncSoqlFields(){
-        console.log('starting resyncSoqlFields');
-
+        console.log('starting restoreSavedSelections');
+        // Only proceed if we have saved values
+        if (!this.savedObjectValue) return;
+        
         this.isLoading = true;
         
-        this.soqlQuery = this.template.querySelector('[data-id="soql_query_textarea"]').value;
-        this.parsedSoql = this.parseSoql(this.soqlQuery);
-        const parsedObjValueLowercase = this.parsedSoql.objectName.toLowerCase();
+        // Update object options to mark the saved object as selected
+        let tempObjectOptions = this.objectOptions.map(option => {
+            return {
+                ...option,
+                selected: option.value === this.savedObjectValue
+            };
+        });
 
-        console.log('Object comparision ' + parsedObjValueLowercase + ':' + this.objectValue);
-
-        if(parsedObjValueLowercase.toLowerCase() !== this.objectValue.toLowerCase()){
-
-            alert('Not implemented yet when objects differ');
-            //this.resyncObject(parsedObjValueLowercase);
-            this.isLoading = false;
-        } else {
-
-            console.log('Object not changed so just update fields and where options : ' + this.isLoading);
-
-            var selectedFieldsCaseInsensitive = this.parsedSoql.fields.map(f => f.toLowerCase());
-
-            const fldSelect = this.template.querySelector('[data-id="fieldSelect"]');
-            for(let i=0; i<fldSelect.options.length; i++){
-                // check if selectedFieldsCaseInsensitive contains the value of the option in lower case
-                if(selectedFieldsCaseInsensitive.includes(fldSelect.options[i].value.toLowerCase())){
-                    fldSelect.options[i].selected = true;
-                } else {
-                    fldSelect.options[i].selected = false;
-                }
-            }
-            this.isLoading = false;
-        }
-    }
-
-    resyncSoqlObject(){
-
-        console.log('starting resyncSoqlObject');
-        this.soqlQuery = this.template.querySelector('[data-id="soql_query_textarea"]').value;
-        this.parsedSoql = this.parseSoql(this.soqlQuery);
-        const parsedObjValueLowercase = this.parsedSoql.objectName.toLowerCase();
-
-        console.log('parsedObjValueLowercase:' + parsedObjValueLowercase);
-
-        var tempObjectOptions = [];
-        for(let i=0; i<this.objectOptions.length; i++){
-            
-            if(this.objectOptions[i].value.toLowerCase() === parsedObjValueLowercase){
-                console.log('Object found in objectOptions');
-                tempObjectOptions = [...tempObjectOptions, {label: this.objectOptions[i].label, value: this.objectOptions[i].value, selected: true}];
-                this.objectValue = this.objectOptions[i].value;
-            } else {
-                tempObjectOptions = [...tempObjectOptions, {label: this.objectOptions[i].label, value: this.objectOptions[i].value, selected: false}];
-            }
-        }
-
-        // force rerender of the object select dropdown
-        this.objectOptions = [];
+        // Force rerender of the object select dropdown
         this.objectOptions = [...tempObjectOptions];
-
-        for(let i=0; i<this.objectOptions.length; i++){
-            if(this.objectOptions[i].selected){
-                console.log('Selected object is ' + this.objectOptions[i].value);
+        
+        // Set the object value
+        this.objectValue = this.savedObjectValue;
+        this.savedObjectValue = null; 
+        
+        // Update the actual DOM element
+        setTimeout(() => {
+            const objectSelect = this.template.querySelector('[data-id="objectSelect"]');
+            if (objectSelect) {
+                objectSelect.value = this.objectValue;
             }
-        }
-
-        this.getFields(false);
-
+        
+            // Get fields for the object and then restore other selections
+            getFieldsForObject({objectName: this.objectValue})
+                .then(data => {
+                    // Process fields data similar to getFields()
+                    var returnOpts = [];
+                    var whereOpts = [];
+                    this.fieldArray = [];
+                    var allValues = [];
+                    allValues = data;
+                    for (var i = 0; i < allValues.length; i++) {
+                        returnOpts = [...returnOpts, {
+                            label: allValues[i].Name,
+                            value: allValues[i].Name,
+                            selected: this.savedSelectedFields.includes(allValues[i].Name),
+                            key: this.objectValue + '-' + allValues[i].Name
+                        }];
+                        
+                        if (allValues[i].Filterable) {
+                            whereOpts = [...whereOpts, {
+                                label: allValues[i].Name,
+                                value: allValues[i].Name,
+                                selected: false
+                            }];
+                        }
+                        this.fieldArrayLowercase[allValues[i].Name.toLowerCase()] = allValues[i];
+                    }
+                    
+                    this.fieldArrayCaseSensitive = allValues;
+                    this.fieldOptions = returnOpts;
+                    this.fieldWhereOptions = whereOpts;
+                    
+                    // Restore selected fields
+                    this.selectedFields = [...this.savedSelectedFields];
+                    
+                    // Use setTimeout to ensure DOM is ready before manipulating elements
+                    setTimeout(() => {
+                        // Restore sort field and order
+                        if (this.template.querySelector('[data-id="QB_orderby_field"]')) {
+                            this.template.querySelector('[data-id="QB_orderby_field"]').value = this.savedSortField;
+                        }
+                        if (this.template.querySelector('[data-id="QB_orderby_sort"]')) {
+                            this.template.querySelector('[data-id="QB_orderby_sort"]').value = this.savedSortOrder;
+                        }
+                        
+                        // Restore limit
+                        if (this.template.querySelector('[data-id="QB_limit_txt"]')) {
+                            this.template.querySelector('[data-id="QB_limit_txt"]').value = this.savedLimit;
+                        }
+                        this.limit = this.savedLimit;
+                        
+                        // Restore filter values
+                        this.savedFilterValues.forEach((filter, index) => {
+                            const fieldElem = this.template.querySelector(`[data-id="QB_filter_field_${index}"]`);
+                            const operElem = this.template.querySelector(`[data-id="QB_filter_compOper_${index}"]`);
+                            const valueElem = this.template.querySelector(`[data-id="QB_filter_value_${index}"]`);
+                            
+                            if (fieldElem && operElem && valueElem) {
+                                fieldElem.value = filter.field;
+                                operElem.value = filter.operator;
+                                valueElem.value = filter.value;
+                            }
+                        });
+                        
+                        // Also restore the field selection in the multi-select
+                        const fieldSelect = this.template.querySelector('[data-id="fieldSelect"]');
+                        if (fieldSelect) {
+                            Array.from(fieldSelect.options).forEach(option => {
+                                option.selected = this.savedSelectedFields.includes(option.value);
+                            });
+                        }
+                        
+                        // Rebuild the query
+                        this.soqlQuery = this.savedSoqlValue;
+                        this.isLoading = false;
+                    }, 0);
+                })
+                .catch(error => {
+                    this.error = error.body.message;
+                    console.error('error (restoreSavedSelections) => ', error);
+                    this.isLoading = false;
+                });
+            }, 0);
+        
     }
 
 
     getSingleEntryData(recordId){
 
         console.log('starting getSingleEntryData');
+
+        this.jumpToTop();
 
         this.isUpdateView = false;
         this.isDeleted = false;
@@ -1019,14 +1106,18 @@ export default class AndeeWorkbench extends LightningElement {
         })
         .catch(error => {
             this.error = error.body.message;
-            console.error('error (displaySingleRow) => ', error); // error handling
+            console.error('error (getSingleEntryData) => ', error); // error handling
             this.isLoading = false;
         })
     }
 
     displayUpdateView(event){
         console.log('starting displayUpdateView');
+        
         this.isLoading = true;
+
+        this.jumpToTop();
+
         this.isUpdateView = true;
         this.isLoading = false;
     }
@@ -1034,6 +1125,9 @@ export default class AndeeWorkbench extends LightningElement {
     updateRow(event){
         console.log('starting updateRow');
         this.isLoading = true;
+
+        this.jumpToTop();
+
         // Get all the document elements with the name of 'updateField' and loop through them
         // For each element, get the value and add it to the rowData array
         var updateFields = this.template.querySelectorAll('[data-id="updateField"]');
@@ -1111,6 +1205,9 @@ export default class AndeeWorkbench extends LightningElement {
     displayNewRowForInsert(event){
         console.log('starting displayNewRowForInsert');
         this.isLoading = true;
+
+        this.jumpToTop();
+
         this.error = undefined;
         this.isInsertView = true;
         // set this.fieldArrayCaseSensitive property Value to have the value of DefaultValue if it exists
@@ -1128,6 +1225,9 @@ export default class AndeeWorkbench extends LightningElement {
     insertRow(event){
         console.log('starting insertRow');
         this.isLoading = true;
+
+        this.jumpToTop();
+
         var insertedData = [];
         
         // Set the Value to the DefaultValues for a straight insert.  Required as Clone can populate Value so need to reset.
@@ -1202,6 +1302,9 @@ export default class AndeeWorkbench extends LightningElement {
     cloneRow(event){
         console.log('starting cloneRow');
         this.isLoading = true;
+
+        this.jumpToTop();
+
         this.error = undefined;
 
         for(var i=0; i<this.fieldArrayCaseSensitive.length; i++){
@@ -1262,6 +1365,8 @@ export default class AndeeWorkbench extends LightningElement {
     undeleteRow(event){
         console.log('starting undeleteRow');
         this.isLoading = true;
+
+        this.jumpToTop();
 
         undeleteEntry({selectedId : this.selectedSingleRecordId})
         .then(data => {
@@ -1467,63 +1572,15 @@ export default class AndeeWorkbench extends LightningElement {
     }
 
     previewClick(event) {
+        console.log('starting previewClick');
         const url = event.currentTarget.dataset.id;
         window.open(url, '_blank');
     }
 
     jumpToTop() {
-        console.log('starting jumpToTop');
-        window.scrollTo({
-            top: 0,
-            behavior: 'auto'
-        });
-        console.log('ending jumpToTop');
+        //console.log('starting jumpToTop');
+        window.scrollTo({ top: 0, behavior: 'smooth' });
     }
-
-    /*datetimeChange(){
-
-        
-        console.log('starting datetimeChange');
-        this.isLoading = true;
-
-        this.convertDateTime = this.template.querySelector('[data-id="datetimeIn"]').value.replace('T', ' ');
-
-        const [datePart, timePart] = this.convertDateTime.split(' ');
-        const [year, month, day] = datePart.split('-');
-        const [hour, minute, second] = timePart.split(':');
-
-        if(this.template.querySelector('[data-id="localToUtc"]')){
-            const localToUtc = this.template.querySelector('[data-id="localToUtc"]').checked;
-            var fromTz = 'UTC';
-            var toTz = this.usersTimezone;
-            if(localToUtc){
-                fromTz = this.usersTimezone;
-                toTz = 'UTC';
-            }
-
-            convertTimeZone({datetimeStr : year+'-'+month+'-'+day+' '+hour+':'+minute+':'+(second===undefined?'00':second),
-                fromTz : fromTz,
-                toTz : toTz
-
-            })
-            .then(data => {
-                var returnedDatetime = data + '';
-                this.error = undefined;
-                var convertedDatetimeId = this.template.querySelector('[data-id="convertedDatetimeId"]');
-                convertedDatetimeId.innerHTML = returnedDatetime;
-                this.isLoading = false;
-            })
-            .catch(error => {
-                if(error.body.message){
-                    this.error = error.body.message;
-                } else {
-                    this.error = 'Error occurred.  See console log for details';
-                }
-                console.error('error (convertTimeZone) => ', error); // error handling
-                this.isLoading = false;
-            })
-        }
-    }*/
 
     
 
@@ -1634,7 +1691,6 @@ export default class AndeeWorkbench extends LightningElement {
     }
 
     get showWorkbench(){
-        console.log(this.isQuotesGame + ' ' + this.isExecAnon);
         return !(this.isQuotesGame || this.isExecAnon);
     }
 
