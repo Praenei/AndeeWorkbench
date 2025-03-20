@@ -106,10 +106,12 @@ table.scrollable thead {
 .link-preview-container {
   display: flex;
   align-items: center;
+  gap: 8px;
 }
 
 .preview-icon-container {
-  margin-left: 8px;
+  display: flex;
+  align-items: center;
   cursor: pointer;
 }
 
