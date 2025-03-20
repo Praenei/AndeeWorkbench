@@ -26,7 +26,7 @@ public with sharing class BatchAndeeWorkbench implements Database.Batchable<sObj
         csvHeader = String.join(fields, '\t') + '\n';
 
         ContentVersion cv = new ContentVersion();
-        cv.Title = 'QueryResults ' + System.currentTimeMillis();
+        cv.Title = AndeeWorkbenchController.DOWNLOAD_CONTENT_VERSION_TITLE_PREFIX + System.currentTimeMillis();
         cv.VersionData = Blob.valueOf('Dummy');
         cv.PathOnClient = 'workBench/' + cv.Title + '.tsv';
         cv.isMajorVersion = false;
@@ -38,11 +38,7 @@ public with sharing class BatchAndeeWorkbench implements Database.Batchable<sObj
         this.contentDocumentId = cvTemp.contentDocumentId;
 
         // Delete any contentVersions which are older that 2 days & have a pathOnClient starting with 'workBench/'
-        list<id> cdIds = new list<id>();
-        for(contentVersion c : [SELECT id, contentdocumentId FROM ContentVersion WHERE Title LIKE 'QueryResults %' AND createdDate < :Datetime.now().addDays(-2) AND PathOnClient LIKE 'workBench/%']){
-            cdIds.add(c.contentdocumentId);
-        }
-        delete [SELECT id FROM ContentDocument WHERE id IN :cdIds];
+        AndeeWorkbenchController.DeleteOldDownloads();
     }
 
     /**
@@ -122,7 +118,7 @@ public with sharing class BatchAndeeWorkbench implements Database.Batchable<sObj
         } else {
             system.debug('saveContentVersion: insert');
             ContentVersion cv = new ContentVersion();
-            cv.Title = 'QueryResults ' + System.currentTimeMillis();
+            cv.Title = AndeeWorkbenchController.DOWNLOAD_CONTENT_VERSION_TITLE_PREFIX + System.currentTimeMillis();
             cv.VersionData = Blob.valueOf(this.csvHeader + this.csvOutput);
             cv.ContentDocumentId = this.contentDocumentId;
             cv.PathOnClient = 'workBench/' + cv.Title + '.tsv';
