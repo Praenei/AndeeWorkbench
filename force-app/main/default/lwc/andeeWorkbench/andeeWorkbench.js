@@ -7,6 +7,7 @@ import submitQuery from '@salesforce/apex/AndeeWorkbenchController.SubmitQuery';
 import submitCountQuery from '@salesforce/apex/AndeeWorkbenchController.SubmitCountQuery';
 import submitQueryTsv from '@salesforce/apex/AndeeWorkbenchController.SubmitQueryTsv';
 import GetSettings from '@salesforce/apex/AndeeWorkbenchController.GetSettings';
+import DeleteOldDownloads from '@salesforce/apex/AndeeWorkbenchController.DeleteOldDownloads';
 import getSingleEntryData from '@salesforce/apex/AndeeWorkbenchController.GetSingleEntryData';
 import updateSingleEntryData from '@salesforce/apex/AndeeWorkbenchController.UpdateSingleEntryData';
 import deleteEntry from '@salesforce/apex/AndeeWorkbenchController.DeleteEntry';
@@ -136,11 +137,18 @@ export default class AndeeWorkbench extends LightningElement {
                 this.activeUsers[result.ActiveUsers[i].Id] = result.ActiveUsers[i].Name;
             }
             this.isSandbox = result.IsSandbox;
+
+            DeleteOldDownloads()
+            .then(result2 => {
+            })
+            .catch(error => {
+                console.error('error (DeleteOldDownloads) => ', error);
+            })
         })
         .catch(error => {
             window.console.log('error (connectedCallback) =====> '+JSON.stringify(error));
             if(error) {
-                this.error = error.body.message;
+                this.error = error;
                 window.console.log('@@@@ ERROR '+ error);
             }
         })
@@ -1090,12 +1098,24 @@ export default class AndeeWorkbench extends LightningElement {
             this.rowData = data.Fields;
 
             // Check if data.Fields contains iSDeleted field & if it does set this.isDeleted to true so that the undelete button appears
+            const setupUrl = this.orgDomainUrl.replace(/\.com\/$/, '-setup.com/');
             for(var i=0; i<this.rowData.length; i++){
+
+                // Check if the user can perform Login As & is the id being processed is an active user
+                if (this.rowData[i].Linkable && this.rowData[i].Value !== undefined && this.rowData[i].Value !== null && this.rowData[i].Value.length > 0) {
+                    if(this.canLoginAs && this.activeUsers[this.rowData[i].Value] && this.usersId != this.rowData[i].Value){
+                        this.rowData[i].IsActiveUserId = true;
+                        this.rowData[i].LoginAsTitle = 'Login as ' + this.activeUsers[this.rowData[i].Value];
+                        this.rowData[i].UserName = this.activeUsers[this.rowData[i].Value];
+                        this.rowData[i].LoginAsUrl = setupUrl + 'servlet/servlet.su?oid=' + this.orgId.substring(0,15) + '&suorgadminid=' + this.rowData[i].Value.substring(0, 15) + '&retURL=%2F' + this.rowData[i].Value + '%3Fnoredirect%3D1%26isUserEntityOverride%3D1%26retURL%3D%252Fsetup%252Fhome%26appLayout%3Dsetup%26tour%3D%26isdtp%3Dp1%26sfdcIFrameOrigin%3Dhttps%253A%252F%252F' + setupUrl.substring(8, setupUrl.length - 1) + '%26sfdcIFrameHost%3Dweb%26nonce%3Dd49a6dfcca803aea44118a3bb621da4893fdb78e0bdee7fd0e5537afb66a600f%26ltn_app_id%3D%26clc%3D1&targetURL=%2Fhome%2Fhome.jsp';
+                    }
+                }
+
                 if(this.rowData[i].Name == 'IsDeleted'){
                     if(this.rowData[i].Value.toLowerCase() == 'true'){                        
                         this.isDeleted = true;
                     }   
-                    break;
+                    //break;
                 }
             }
 
@@ -1105,7 +1125,7 @@ export default class AndeeWorkbench extends LightningElement {
         
         })
         .catch(error => {
-            this.error = error.body.message;
+            this.error = error;
             console.error('error (getSingleEntryData) => ', error); // error handling
             this.isLoading = false;
         })
