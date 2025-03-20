@@ -4,6 +4,8 @@ public with sharing class AndeeWorkbenchController {
 
     public static final String DATETIME_PATTERN = '^(\\d{4})-(?:(0[1-9])|(1[0-2]))-((?:0[1-9])|(?:[12]\\d)|(?:3[01])) ((?:[01]\\d)|(?:2[0-3])):([0-5]\\d):([0-5]\\d)$';
     private static final Set<String> STRING_LIKE_TYPES = new Set<String>{'STRING', 'ID', 'REFERENCE', 'PICKLIST', 'TEXTAREA', 'ADDRESS', 'PHONE', 'EMAIL', 'URL', ' CURRENCY', 'MULTIPICKLIST'};
+    public static final String DOWNLOAD_CONTENT_VERSION_TITLE_PREFIX = 'AndeeWorkbench QueryResults ';
+    public static final Integer DOWNLOAD_RETENTION_DAYS = 2;
 
     /* @method: GetSettings
      * @description:  Get the Org Domain URL & user's Timezone
@@ -27,6 +29,24 @@ public with sharing class AndeeWorkbenchController {
         settings.IsSandbox = [SELECT Id, IsSandbox FROM Organization LIMIT 1].IsSandbox;
 
         return settings;
+    }
+
+    @AuraEnabled
+    public static void DeleteOldDownloads(){
+        
+        Date retentionDate = Date.today().addDays(DOWNLOAD_RETENTION_DAYS * -1);
+
+        string genericTitle = DOWNLOAD_CONTENT_VERSION_TITLE_PREFIX + '%';
+
+        // Query ContentDocument records with the specified title prefix and older than one week
+        List<ContentDocument> documentsToDelete = [SELECT Id FROM ContentDocument 
+                                                WHERE Id IN (SELECT ContentDocumentId FROM ContentVersion 
+                                                                WHERE Title LIKE :genericTitle 
+                                                                AND CreatedDate < :retentionDate
+                                                                AND PathOnClient LIKE 'workBench/%')];
+
+        // Delete the queried records
+        delete documentsToDelete;
     }
     
     /* @method: GetAllObjects
@@ -231,8 +251,6 @@ public with sharing class AndeeWorkbenchController {
     */
     private static String getFieldType(string objectName, String fieldName){
 
-        system.debug('getFieldType: ' + objectName + '.' + fieldName);
-
         if(fieldTypeMap.containsKey(objectName + '.' + fieldName)){
             return fieldTypeMap.get(objectName + '.' + fieldName);
         } else {
@@ -367,9 +385,9 @@ public with sharing class AndeeWorkbenchController {
         }
 
         ContentVersion cv = new ContentVersion();
-        cv.Title = 'QueryResults ' + System.currentTimeMillis();
+        cv.Title = DOWNLOAD_CONTENT_VERSION_TITLE_PREFIX + System.currentTimeMillis();
         cv.VersionData = Blob.valueOf(csvOutput);
-        cv.PathOnClient = cv.Title + '.tsv';
+        cv.PathOnClient = 'workBench/' + cv.Title + '.tsv';
 
         insert cv;
 
@@ -390,10 +408,6 @@ public with sharing class AndeeWorkbenchController {
      * @return : string : SOQL statement
     */
     public static string constructQuery(String objectApiName, list<string> fields, string whereClause, string sortOrder, string limitCount, boolean allRows, string offset){
-
-        /*for(integer i=0; i<fields.size(); i++){
-            system.debug('field (' + i + '): ' + fields[i]);
-        }*/
 
         // Build the query string
         String query = 'SELECT ' + String.join(fields, ', ') + ' FROM ' + objectApiName;
@@ -472,8 +486,6 @@ public with sharing class AndeeWorkbenchController {
         // convert the JSON string to a QuerySingleRowWrapper object    
         QuerySingleRowWrapper querySingleRowWrapper = (QuerySingleRowWrapper)JSON.deserialize(querySingleRowJson, QuerySingleRowWrapper.class);
 
-        system.debug(querySingleRowWrapper);
-
         // get the Id from querySingleRowWrapper    (always the first field in the list)
         id selectedId = Id.valueOf(querySingleRowWrapper.Fields[0].Value);
         
@@ -492,7 +504,6 @@ public with sharing class AndeeWorkbenchController {
         // loop through the fields in querySingleRowWrapper.Fields and set the values on the object
         for(FieldWrapper field : objFields){
             if(field.Value != field.OriginalValue || field.Name == 'Id'){
-                system.debug(field.Name + ' : ' + field.Type + ' : ' + field.Value + ' : ' + field.OriginalValue);
                 if(field.Value != field.OriginalValue){
                     hasFieldValueChanged = true;
                 }
@@ -549,7 +560,6 @@ public with sharing class AndeeWorkbenchController {
 
         for(FieldWrapper field : objFields){
             if(field.Value != ''){
-                system.debug(field.Name + ' : ' + field.Type + ' : ' + field.Value);
                 if(field.Type == 'BOOLEAN'){
                     obj.put(field.Name, field.Value == 'true');
                 } else if(field.Type == 'DATE'){
