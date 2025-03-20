@@ -29,7 +29,7 @@
                         <div class="slds-media slds-no-space slds-grow">
                             <h2 class="slds-card__header-title">
                                 <span class="slds-truncate slds-m-right--xx-small" title="Workbench" onclick={zombieEasterEgg}>
-                                    Workbench 1.18
+                                    Workbench 2.0
                                 </span>
                             </h2>
                         </div>
@@ -588,7 +588,14 @@
                                     
                                     <td>
                                         <template if:true={record.Linkable}>
-                                            <a data-id={record.Value} onclick={displaySingleRow}>{record.Value}</a>
+                                            <div class="link-preview-container">
+                                                <a data-id={record.Value} onclick={displaySingleRow}>{record.Value}</a>
+                                                <template if:true={record.IsActiveUserId}>
+                                                    <div key={record.Value} class="preview-icon-container" onclick={loginAsClick} data-id={record.LoginAsUrl} data-username={record.UserName}>
+                                                        <lightning-icon icon-name='utility:user' alternative-text='Login As' size='xx-small' title={record.LoginAsTitle}></lightning-icon>
+                                                    </div>
+                                                </template>
+                                            </div>
                                         </template>
                                         <template if:false={record.Linkable}>
                                             {record.Value}
