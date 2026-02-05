@@ -37,8 +37,8 @@ A simplified version of Workbench built within Salesforce.  Handles simple queri
 <b>Installation</b> 
 
 Order if not deploying all at once via Ant etc.
-1) Objects/fields/layouts (AndeeWorkbench_Favourite__c - this expects multicurrency to be on.  You will need to remove CurrencyIsoCode from the layout if that is not your set-up)
-2) Apex classes (AndeeWorkbenchController, AndeeWorkbenchController_Test, AndeeExecuteAnonController, AndeeExecuteAnonController_Test, BatchAndeeWorkbench & BatchAndeeWorkbench_Test
+1) Objects/fields then layouts (AndeeWorkbench_Favourite__c - this expects multicurrency to be on.  You will need to remove CurrencyIsoCode from the layout if that is not your set-up)
+2) Apex classes (MockHttpResponseGenerator, AndeeExecuteAnonController, AndeeExecuteAnonController_Test, BatchAndeeWorkbench, BatchAndeeWorkbench_Test, AndeeWorkbenchController & AndeeWorkbenchController_Test
 3) All Static Resources
 4) LWC - areYouSure
 5) LWC - andeeZombie
