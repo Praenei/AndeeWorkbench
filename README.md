@@ -1,6 +1,6 @@
 <b>Summary</b>
 
-A simplified version of Workbench built within Salesforce.  Handles simple queries & DML operations.  Includes 2 easter egg gamse for those that want a bit of down time.
+A simplified version of Workbench built within Salesforce.  Handles simple queries & DML operations.  Includes 2 easter egg games for those that want a bit of down time.
 
 
 <b>Features</b>
